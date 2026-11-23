@@ -54,6 +54,21 @@ class FreelancerProfileResource extends Resource
                 TextEntry::make('about')->placeholder('—')->columnSpanFull(),
                 TextEntry::make('categories.name')->label('Categories')->badge()->placeholder('—'),
                 TextEntry::make('skills.name')->label('Skills')->badge()->placeholder('—'),
+                TextEntry::make('consultations')
+                    ->getStateUsing(fn (FreelancerProfile $record): array => ProfileRevisionResource::consultationLines($record->liveContent()))
+                    ->listWithLineBreaks()
+                    ->placeholder('—')
+                    ->columnSpanFull(),
+                TextEntry::make('services')
+                    ->getStateUsing(fn (FreelancerProfile $record): array => ProfileRevisionResource::serviceLines($record->liveContent()))
+                    ->listWithLineBreaks()
+                    ->placeholder('—')
+                    ->columnSpanFull(),
+                TextEntry::make('highlights')
+                    ->getStateUsing(fn (FreelancerProfile $record): array => ProfileRevisionResource::highlightLines($record->liveContent()))
+                    ->listWithLineBreaks()
+                    ->placeholder('—')
+                    ->columnSpanFull(),
                 TextEntry::make('experiences')
                     ->label('Work history')
                     ->getStateUsing(fn (FreelancerProfile $record): array => $record->experiences

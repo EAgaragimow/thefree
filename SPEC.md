@@ -105,7 +105,15 @@ Suggested profile review stages: `Draft → Pending Review → Published`, with 
 
 ### Offer types
 
-**Consultations:** Freelancer can offer paid calls with configurable durations and prices (for example, 30, 60, or 90 minutes). Scheduling rules are defined in §8.
+**Consultations:** Every Freelancer has exactly two consultation types, **Free Consultation** and **Paid Consultation**. They are fixed: a Freelancer cannot add, duplicate, or delete them, only configure each one:
+
+- **Offered:** on/off. A type that is switched off is not shown to Clients and cannot be booked; its settings are kept.
+- **Length:** one duration in minutes per type (15–480).
+- **Price:** the Free consultation always costs **$0**. The Paid consultation costs **at least $1.00** (USD).
+- **Availability:** the days of the week it can be booked and, for each day, a start and end time. Times are in the Freelancer's profile time zone and are shown to Clients converted to their own. A window must be at least as long as the consultation.
+- **Description:** short text about what the call covers.
+
+Free and Paid are configured independently (different length, days, and hours). Changes to consultations go through the same profile review as other profile content. Booking and scheduling rules are defined in §8; a Free consultation involves no payment authorization (§9).
 
 **Services:** Freelancer creates descriptive service offers with one of these pricing modes:
 
@@ -171,7 +179,7 @@ Suggested profile review stages: `Draft → Pending Review → Published`, with 
 
 ### Availability and scheduling
 
-- Freelancer sets a recurring weekly schedule, exceptions, days off, and blocked hours.
+- Freelancer sets a recurring weekly schedule per consultation type (Free and Paid: days and hours, see §4), plus exceptions, days off, and blocked hours.
 - Freelancer connects/disconnects external calendars; busy periods are considered to prevent double bookings.
 - All appointment times display correctly in the viewer's selected time zone.
 - Clients must book **at least 24 hours before** the proposed start time.
@@ -225,6 +233,7 @@ Suggested profile review stages: `Draft → Pending Review → Published`, with 
 
 ### General model
 
+- **A Free consultation (price $0) involves no payment method, authorization, or charge**; all payment rules below apply to Paid consultations only. Cancellation and no-show rules still apply, but have no monetary effect on a Free consultation.
 - **All amounts are in USD.** Client can save **multiple payment methods without a product-imposed numeric limit** and choose a default.
 - When booking a consultation, clearly display the default payment method and allow choosing a different saved method **for that specific call**.
 - Validate/store the selected payment method when the booking request is created. This is **not** a reservation or a guarantee of future funds.
@@ -360,6 +369,7 @@ Full System Control means broad authorized **application** administration, not b
 - Responsive layouts and consistent reusable components.
 - Clear permissions, form validation, empty/loading/error/success states, and accessible navigation.
 - All interface copy in **English**. Honor the user's selected time zone; use USD for monetary display.
+- **All times are shown and entered in 24-hour format** (`HH:MM`, for example `09:00` or `17:30`) everywhere in the product, including emails and the admin area. No AM/PM.
 
 ## 15. Development Phases
 

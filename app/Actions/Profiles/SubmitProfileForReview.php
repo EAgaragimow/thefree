@@ -65,6 +65,10 @@ class SubmitProfileForReview
             $errors['skill_ids'] = 'Select at least one skill before submitting.';
         }
 
+        if (($problems = $content->offerProblems()) !== []) {
+            $errors['content'] = implode(' ', $problems);
+        }
+
         if ($errors !== []) {
             throw ValidationException::withMessages($errors);
         }

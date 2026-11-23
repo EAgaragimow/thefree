@@ -28,6 +28,10 @@
                 @elseif ($user->isFreelancer())
                     <flux:sidebar.item icon="home" href="{{ route('freelancer.dashboard') }}" :current="request()->routeIs('freelancer.dashboard')">Dashboard</flux:sidebar.item>
                     <flux:sidebar.item icon="user-circle" href="{{ route('freelancer.profile') }}" :current="request()->routeIs('freelancer.profile')">My profile</flux:sidebar.item>
+                    <flux:sidebar.item icon="photo" href="{{ route('freelancer.highlights') }}" :current="request()->routeIs('freelancer.highlights')">Highlights</flux:sidebar.item>
+                    <flux:sidebar.item icon="briefcase" href="{{ route('freelancer.services') }}" :current="request()->routeIs('freelancer.services')">Services</flux:sidebar.item>
+                    <flux:sidebar.item icon="video-camera" href="{{ route('freelancer.consultations') }}" :current="request()->routeIs('freelancer.consultations')">Consultations</flux:sidebar.item>
+                    <flux:sidebar.item icon="eye" href="{{ route('freelancer.preview') }}" :current="request()->routeIs('freelancer.preview')">Preview</flux:sidebar.item>
                 @else
                     <flux:sidebar.item icon="shield-check" href="{{ url('/admin') }}">Admin panel</flux:sidebar.item>
                 @endif

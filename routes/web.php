@@ -27,5 +27,9 @@ Route::middleware(['auth', 'active', 'verified'])->group(function () {
     Route::middleware('role:freelancer')->prefix('freelancer')->name('freelancer.')->group(function () {
         Route::livewire('/dashboard', 'pages::freelancer.dashboard')->name('dashboard');
         Route::livewire('/profile', 'pages::freelancer.profile')->name('profile');
+        Route::livewire('/highlights', 'pages::freelancer.highlights')->name('highlights');
+        Route::livewire('/services', 'pages::freelancer.services')->name('services');
+        Route::livewire('/consultations', 'pages::freelancer.consultations')->name('consultations');
+        Route::livewire('/preview', 'pages::freelancer.preview')->name('preview');
     });
 });

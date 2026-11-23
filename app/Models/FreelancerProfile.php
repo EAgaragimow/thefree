@@ -88,6 +88,21 @@ class FreelancerProfile extends Model
         return $this->hasMany(FreelancerExperience::class)->orderBy('sort_order');
     }
 
+    public function highlights(): HasMany
+    {
+        return $this->hasMany(Highlight::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function services(): HasMany
+    {
+        return $this->hasMany(Service::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function consultationOffers(): HasMany
+    {
+        return $this->hasMany(ConsultationOffer::class)->orderBy('type');
+    }
+
     public function revisions(): HasMany
     {
         return $this->hasMany(FreelancerProfileRevision::class)->latest('id');

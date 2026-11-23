@@ -3,7 +3,11 @@
 namespace App\Filament\Resources\ProfileRevisions;
 
 use App\Actions\Profiles\ApproveProfile;
+use App\Actions\Profiles\ConsultationSchedule;
+use App\Actions\Profiles\ProfileContent;
 use App\Actions\Profiles\RequestProfileChanges;
+use App\Enums\ConsultationType;
+use App\Enums\PricingMode;
 use App\Enums\ProfileStatus;
 use App\Filament\Resources\ProfileRevisions\Pages\ListProfileRevisions;
 use App\Filament\Resources\ProfileRevisions\Pages\ViewProfileRevision;
@@ -22,6 +26,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Str;
 use UnitEnum;
 
 /**
@@ -72,6 +77,21 @@ class ProfileRevisionResource extends Resource
                     ->getStateUsing(fn (FreelancerProfileRevision $record): array => collect($record->content()->experiences())
                         ->map(fn (array $experience): string => "{$experience['role']} at {$experience['company']} ({$experience['started_at']} – ".($experience['ended_at'] ?? 'present').')')
                         ->all())
+                    ->listWithLineBreaks()
+                    ->placeholder('—')
+                    ->columnSpanFull(),
+                TextEntry::make('consultations')
+                    ->getStateUsing(fn (FreelancerProfileRevision $record): array => self::consultationLines($record->content()))
+                    ->listWithLineBreaks()
+                    ->placeholder('—')
+                    ->columnSpanFull(),
+                TextEntry::make('services')
+                    ->getStateUsing(fn (FreelancerProfileRevision $record): array => self::serviceLines($record->content()))
+                    ->listWithLineBreaks()
+                    ->placeholder('—')
+                    ->columnSpanFull(),
+                TextEntry::make('highlights')
+                    ->getStateUsing(fn (FreelancerProfileRevision $record): array => self::highlightLines($record->content()))
                     ->listWithLineBreaks()
                     ->placeholder('—')
                     ->columnSpanFull(),
@@ -147,6 +167,70 @@ class ProfileRevisionResource extends Resource
     }
 
     /**
+     * @return list<string>
+     */
+    public static function consultationLines(ProfileContent $content): array
+    {
+        return collect($content->consultationOffers())
+            ->filter(fn (array $offer): bool => $offer['enabled'])
+            ->map(fn (array $offer): string => collect([
+                ConsultationType::from($offer['type'])->label(),
+                "{$offer['duration_minutes']} min",
+                $offer['price_cents'] > 0 ? '$'.number_format($offer['price_cents'] / 100, 2) : 'Free',
+                implode(', ', ConsultationSchedule::summary($offer['availability'])).' ('.$content->get('timezone').')',
+                $offer['description'],
+            ])->filter()->implode(' · '))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function serviceLines(ProfileContent $content): array
+    {
+        return collect($content->services())
+            ->map(function (array $service): string {
+                $mode = PricingMode::from($service['pricing_mode']);
+                $price = $mode->requiresPrice() ? ' $'.number_format(($service['price_cents'] ?? 0) / 100, 2) : '';
+
+                return "{$service['title']} · {$mode->label()}{$price}";
+            })
+            ->all();
+    }
+
+    /**
+     * Highlights with their media counts, video links and external links, so a moderator can
+     * see everything the freelancer wants to publish.
+     *
+     * @return list<string>
+     */
+    public static function highlightLines(ProfileContent $content): array
+    {
+        return collect($content->highlights())
+            ->map(function (array $highlight): string {
+                $parts = [$highlight['title']];
+
+                $images = count($highlight['gallery']) + ($highlight['cover_path'] ? 1 : 0);
+
+                if ($images > 0) {
+                    $parts[] = $images.' '.Str::plural('image', $images);
+                }
+
+                if ($highlight['video_urls'] !== []) {
+                    $parts[] = 'videos: '.implode(', ', $highlight['video_urls']);
+                }
+
+                if ($highlight['links'] !== []) {
+                    $parts[] = 'links: '.collect($highlight['links'])->map(fn (array $link): string => ($link['label'] ?: 'link')." ({$link['url']})")->implode(', ');
+                }
+
+                return implode(' · ', $parts);
+            })
+            ->all();
+    }
+
+    /**
      * Human-readable names of the fields a revision changes relative to what is live.
      *
      * @return list<string>
@@ -170,6 +254,9 @@ class ProfileRevisionResource extends Resource
             'category_ids' => 'Categories',
             'skill_ids' => 'Skills',
             'experiences' => 'Work history',
+            'highlights' => 'Highlights',
+            'services' => 'Services',
+            'consultation_offers' => 'Consultations',
         ];
 
         return collect($revision->content()->changedKeys($profile->liveContent()))
