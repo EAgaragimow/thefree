@@ -14,6 +14,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Arr;
 use UnitEnum;
 
 class AuditLogResource extends Resource
@@ -58,8 +59,18 @@ class AuditLogResource extends Resource
                 TextEntry::make('subject_type')->label('Subject type')->placeholder('—'),
                 TextEntry::make('subject_id')->label('Subject ID')->placeholder('—'),
                 TextEntry::make('reason')->placeholder('—')->columnSpanFull(),
+                TextEntry::make('activation_url')
+                    ->label('Activation link (local environment only)')
+                    ->getStateUsing(fn (AuditLog $record): ?string => $record->metadata['activation_url'] ?? null)
+                    ->copyable()
+                    ->visible(fn (AuditLog $record): bool => filled($record->metadata['activation_url'] ?? null))
+                    ->columnSpanFull(),
                 TextEntry::make('metadata')
-                    ->getStateUsing(fn (AuditLog $record): ?string => $record->metadata ? json_encode($record->metadata, JSON_PRETTY_PRINT) : null)
+                    ->getStateUsing(function (AuditLog $record): ?string {
+                        $metadata = Arr::except($record->metadata ?? [], ['activation_url']);
+
+                        return $metadata ? json_encode($metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) : null;
+                    })
                     ->placeholder('—')
                     ->columnSpanFull(),
                 TextEntry::make('ip_address')->label('IP address')->placeholder('—'),

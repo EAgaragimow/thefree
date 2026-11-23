@@ -43,7 +43,7 @@ class ApproveApplication
                 'invitation_expires_at' => now()->addDays(self::INVITATION_VALID_DAYS),
             ])->save();
 
-            ($this->audit)('application.approved', $locked, $note, actor: $admin);
+            ($this->audit)('application.approved', $locked, $note, FreelancerInvitation::localTestingMetadata($token), $admin);
 
             return $token;
         });

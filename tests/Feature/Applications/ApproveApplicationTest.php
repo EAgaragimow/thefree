@@ -112,3 +112,44 @@ it('refuses to resend an invitation that was already used', function () {
     expect(fn () => app(ResendInvitation::class)($application, User::factory()->admin()->create()))
         ->toThrow(DomainException::class);
 });
+
+it('records the activation link in the audit log only in the local environment', function (string $environment, bool $expectLink) {
+    Notification::fake();
+    app()->detectEnvironment(fn () => $environment);
+    $admin = User::factory()->admin()->create();
+    $application = FreelancerApplication::factory()->create();
+
+    app(ApproveApplication::class)($application, $admin);
+
+    $log = AuditLog::where('action', 'application.approved')->firstOrFail();
+
+    if (! $expectLink) {
+        expect($log->metadata)->not->toHaveKey('activation_url');
+
+        return;
+    }
+
+    Notification::assertSentTo($application, FreelancerInvitation::class, function (FreelancerInvitation $notification) use ($log) {
+        return $log->metadata['activation_url'] === route('freelancer.activate', $notification->token);
+    });
+})->with([
+    'local' => ['local', true],
+    'production' => ['production', false],
+    'testing' => ['testing', false],
+]);
+
+it('records the new activation link when an invitation is resent locally', function () {
+    Notification::fake();
+    app()->detectEnvironment(fn () => 'local');
+    $admin = User::factory()->admin()->create();
+    $application = FreelancerApplication::factory()->approved()->create();
+
+    app(ResendInvitation::class)($application, $admin);
+
+    $log = AuditLog::where('action', 'application.invitation_resent')->firstOrFail();
+
+    Notification::assertSentTo($application, FreelancerInvitation::class, function (FreelancerInvitation $notification) use ($log, $application) {
+        return $log->metadata['activation_url'] === route('freelancer.activate', $notification->token)
+            && hash('sha256', $notification->token) === $application->refresh()->invitation_token_hash;
+    });
+});

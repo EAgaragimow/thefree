@@ -36,7 +36,7 @@ class ResendInvitation
                 'invitation_expires_at' => now()->addDays(ApproveApplication::INVITATION_VALID_DAYS),
             ])->save();
 
-            ($this->audit)('application.invitation_resent', $locked, actor: $admin);
+            ($this->audit)('application.invitation_resent', $locked, metadata: FreelancerInvitation::localTestingMetadata($token), actor: $admin);
 
             return $token;
         });

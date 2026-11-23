@@ -14,6 +14,22 @@ class FreelancerInvitation extends Notification implements ShouldQueue
     public function __construct(public string $token, public int $validForDays = 7) {}
 
     /**
+     * Audit-log metadata that exposes the activation link so accounts can be activated while
+     * testing without reading the mail log.
+     *
+     * The invitation token is a bearer credential that is normally stored only as a hash, so
+     * the link is recorded in the `local` environment only and never in production.
+     *
+     * @return array<string, string>
+     */
+    public static function localTestingMetadata(string $token): array
+    {
+        return app()->environment('local')
+            ? ['activation_url' => route('freelancer.activate', $token)]
+            : [];
+    }
+
+    /**
      * @return list<string>
      */
     public function via(object $notifiable): array
