@@ -25,6 +25,7 @@
                 @if ($user->isClient())
                     <flux:sidebar.item icon="home" href="{{ route('client.dashboard') }}" :current="request()->routeIs('client.dashboard')">Dashboard</flux:sidebar.item>
                     <flux:sidebar.item icon="users" href="{{ route('directory.index') }}" :current="request()->routeIs('directory.*')">Freelancers</flux:sidebar.item>
+                    <flux:sidebar.item icon="heart" href="{{ route('client.favorites') }}" :current="request()->routeIs('client.favorites')">Favourites</flux:sidebar.item>
                     <flux:sidebar.item icon="building-office" href="{{ route('client.brand-profile') }}" :current="request()->routeIs('client.brand-profile')">Brand profile</flux:sidebar.item>
                 @elseif ($user->isFreelancer())
                     <flux:sidebar.item icon="home" href="{{ route('freelancer.dashboard') }}" :current="request()->routeIs('freelancer.dashboard')">Dashboard</flux:sidebar.item>

@@ -56,6 +56,9 @@
         @if ($profile->isFeatured())
             <flux:badge color="amber" size="sm">Featured</flux:badge>
         @endif
+        @if ($profile->is_newbie)
+            <flux:badge color="sky" size="sm">Newbie</flux:badge>
+        @endif
         @if ($profile->professionalFunction)
             <flux:badge color="blue" size="sm">{{ $profile->professionalFunction->name }}</flux:badge>
         @endif
@@ -70,10 +73,13 @@
 
     <div class="mt-auto flex items-center justify-between gap-2 text-sm text-zinc-500">
         <span class="truncate">{{ $profile->location }}</span>
-        @unless ($locked)
-            @if ($profile->hourly_rate_cents)
-                <span class="shrink-0 font-medium text-zinc-700 dark:text-zinc-200">${{ number_format($profile->hourly_rate_cents / 100) }}/h</span>
-            @endif
-        @endunless
+        <span class="flex shrink-0 items-center gap-3">
+            <span title="Freelancer score">{{ number_format($profile->score) }} pts</span>
+            @unless ($locked)
+                @if ($profile->hourly_rate_cents)
+                    <span class="font-medium text-zinc-700 dark:text-zinc-200">${{ number_format($profile->hourly_rate_cents / 100) }}/h</span>
+                @endif
+            @endunless
+        </span>
     </div>
 </div>

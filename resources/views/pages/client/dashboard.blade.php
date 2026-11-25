@@ -3,8 +3,10 @@
 use App\Actions\Directory\DirectoryPreview;
 use App\Actions\Directory\ToggleFavorite;
 use App\Enums\SubscriptionType;
+use App\Models\BrandProfile;
 use App\Models\FreelancerProfile;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -19,6 +21,14 @@ new #[Title('Dashboard')] class extends Component {
             && filled($profile->industry);
     }
 
+    /**
+     * The brand profile with what the dashboard shows of it, or null before it is filled in.
+     */
+    public function brand(): ?BrandProfile
+    {
+        return auth()->user()->brandProfile?->load(['industry', 'professionalFunctions', 'professionalRoles']);
+    }
+
     public function isFreePlan(): bool
     {
         return auth()->user()->subscription_type === SubscriptionType::FreePlan;
@@ -30,24 +40,26 @@ new #[Title('Dashboard')] class extends Component {
     public const RECOMMENDED = 6;
 
     /**
-     * Freelancers that fit the brand profile, best first.
+     * Freelancers that fit the brand profile, from the highest score to the lowest.
      *
      * @return \Illuminate\Support\Collection<int, FreelancerProfile>
      */
     public function recommended(): \Illuminate\Support\Collection
     {
-        return app(DirectoryPreview::class)(auth()->user()->brandProfile)->take(self::RECOMMENDED);
+        return app(DirectoryPreview::class)(auth()->user()->brandProfile)
+            ->sortByDesc('score')
+            ->values()
+            ->take(self::RECOMMENDED);
     }
 
     /**
-     * Freelancers the client saved that are still available. They are listed even after a lapse
-     * to the Free plan, but then only as cards that ask to upgrade.
+     * Ids of the freelancers the client saved, to show them as saved on the cards.
      *
-     * @return \Illuminate\Database\Eloquent\Collection<int, FreelancerProfile>
+     * @return list<int>
      */
-    public function favorites(): \Illuminate\Database\Eloquent\Collection
+    public function favoriteIds(): array
     {
-        return auth()->user()->favoriteFreelancers()->visible()->forCard()->get();
+        return auth()->user()->favoriteFreelancers()->pluck('freelancer_profiles.id')->all();
     }
 
     public function toggleFavorite(int $profileId): void
@@ -84,27 +96,77 @@ new #[Title('Dashboard')] class extends Component {
     @endunless
 
     @php($hasFullAccess = Gate::allows('view-full-directory'))
-    @php($favorites = $this->favorites())
-    @php($favoriteIds = $favorites->modelKeys())
+    @php($favoriteIds = $this->favoriteIds())
     @php($canFavorite = Gate::allows('favorite-freelancers'))
 
-    @if ($favorites->isNotEmpty())
-        <section class="space-y-3">
-            <flux:heading size="lg">Favorites</flux:heading>
+    @if ($brand = $this->brand())
+        @php($socialLabels = ['linkedin' => 'LinkedIn', 'twitter' => 'X / Twitter', 'instagram' => 'Instagram'])
+        @php($socialLinks = collect($brand->social_links ?? [])->filter(fn ($link): bool => filled($link) && preg_match('#^https?://#i', (string) $link) === 1))
 
-            <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                @foreach ($favorites as $profile)
-                    <x-freelancer-card
-                        wire:key="favorite-card-{{ $profile->id }}"
-                        :profile="$profile"
-                        :href="$hasFullAccess ? route('directory.show', $profile) : null"
-                        :locked="! $hasFullAccess"
-                        :can-favorite="$canFavorite"
-                        :favorited="true"
-                    />
-                @endforeach
+        <flux:card class="space-y-4">
+            <div class="flex flex-wrap items-start justify-between gap-4">
+                <div class="flex min-w-0 items-center gap-4">
+                    <flux:avatar size="lg" :src="$brand->logo_path ? Storage::disk('public')->url($brand->logo_path) : null" :name="$brand->company_name" />
+                    <div class="min-w-0">
+                        <flux:heading size="lg">{{ $brand->company_name }}</flux:heading>
+                        @if ($brand->location)
+                            <flux:text>{{ $brand->location }}</flux:text>
+                        @endif
+                    </div>
+                </div>
+
+                <flux:button size="sm" icon="pencil-square" href="{{ route('client.brand-profile') }}">Edit brand profile</flux:button>
             </div>
-        </section>
+
+            @if ($brand->description)
+                <flux:text class="whitespace-pre-line">{{ $brand->description }}</flux:text>
+            @endif
+
+            <dl class="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+                @if ($brand->contact_email)
+                    <div>
+                        <dt class="text-zinc-500">Email</dt>
+                        <dd class="font-medium">{{ $brand->contact_email }}</dd>
+                    </div>
+                @endif
+                @if ($brand->industry)
+                    <div>
+                        <dt class="text-zinc-500">Industry</dt>
+                        <dd class="font-medium">{{ $brand->industry->name }}</dd>
+                    </div>
+                @endif
+                @if ($brand->professionalFunctions->isNotEmpty())
+                    <div class="sm:col-span-2">
+                        <dt class="text-zinc-500">Functions</dt>
+                        <dd class="mt-1 flex flex-wrap gap-1.5">
+                            @foreach ($brand->professionalFunctions as $function)
+                                <flux:badge color="blue" size="sm">{{ $function->name }}</flux:badge>
+                            @endforeach
+                        </dd>
+                    </div>
+                @endif
+                @if ($brand->professionalRoles->isNotEmpty())
+                    <div class="sm:col-span-2">
+                        <dt class="text-zinc-500">Roles</dt>
+                        <dd class="mt-1 flex flex-wrap gap-1.5">
+                            @foreach ($brand->professionalRoles as $role)
+                                <flux:badge color="indigo" size="sm">{{ $role->name }}</flux:badge>
+                            @endforeach
+                        </dd>
+                    </div>
+                @endif
+                @if ($socialLinks->isNotEmpty())
+                    <div class="sm:col-span-2">
+                        <dt class="text-zinc-500">Social links</dt>
+                        <dd class="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                            @foreach ($socialLinks as $network => $link)
+                                <a href="{{ $link }}" target="_blank" rel="noopener noreferrer nofollow" class="underline">{{ $socialLabels[$network] ?? ucfirst($network) }}</a>
+                            @endforeach
+                        </dd>
+                    </div>
+                @endif
+            </dl>
+        </flux:card>
     @endif
 
     <section class="space-y-3">
@@ -118,7 +180,7 @@ new #[Title('Dashboard')] class extends Component {
         @if ($recommended->isEmpty())
             <flux:text>There are no published freelancers yet. Please check back soon.</flux:text>
         @else
-            <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach ($recommended as $profile)
                     <x-freelancer-card
                         wire:key="recommended-{{ $profile->id }}"

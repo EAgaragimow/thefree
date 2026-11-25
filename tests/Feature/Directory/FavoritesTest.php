@@ -71,26 +71,26 @@ it('does not save a freelancer who is not visible', function (array $attributes,
     'suspended' => [[], ['status' => 'suspended']],
 ]);
 
-it('shows favorites on the dashboard with links for a paid client', function () {
+it('lists favourites with links for a paid client', function () {
     $client = User::factory()->client()->paid()->create();
     $profile = directoryProfile(user: ['name' => 'Grace Hopper']);
     $client->favoriteFreelancers()->attach($profile);
 
-    Livewire::actingAs($client)->test('pages::client.dashboard')
-        ->assertSee('Favorites')
+    Livewire::actingAs($client)->test('pages::client.favorites')
+        ->assertSee('Favourites')
         ->assertSee('Grace Hopper')
         ->assertSee(route('directory.show', $profile));
 });
 
-it('keeps showing favorites after a lapse, without links', function () {
+it('keeps listing favourites after a lapse, without links', function () {
     $client = User::factory()->client()->paid()->create();
     $profile = directoryProfile(user: ['name' => 'Grace Hopper']);
     $client->favoriteFreelancers()->attach($profile);
 
     $client->forceFill(['subscription_type' => 'free-plan'])->save();
 
-    Livewire::actingAs($client)->test('pages::client.dashboard')
-        ->assertSee('Favorites')
+    Livewire::actingAs($client)->test('pages::client.favorites')
+        ->assertSee('Favourites')
         ->assertSee('Grace Hopper')
         ->assertDontSee(route('directory.show', $profile))
         ->assertSee('Upgrade to the Paid Plan');
@@ -104,14 +104,14 @@ it('leaves hidden freelancers out of the favorites list but keeps the row', func
     $client->favoriteFreelancers()->attach($profile);
     $profile->user->forceFill(['status' => 'suspended'])->save();
 
-    Livewire::actingAs($client)->test('pages::client.dashboard')
+    Livewire::actingAs($client)->test('pages::client.favorites')
         ->assertDontSee('Grace Hopper');
 
     expect($client->favoriteFreelancers()->count())->toBe(1);
 
     $profile->user->forceFill(['status' => 'active'])->save();
 
-    Livewire::actingAs($client)->test('pages::client.dashboard')
+    Livewire::actingAs($client)->test('pages::client.favorites')
         ->assertSee('Grace Hopper');
 });
 
@@ -153,4 +153,58 @@ it('counts a favorite only once per client', function () {
     app(ToggleFavorite::class)($client, $profile);
 
     expect(fn () => $client->favoriteFreelancers()->attach($profile))->toThrow(QueryException::class);
+});
+
+it('lists the recommendations from the highest score to the lowest', function () {
+    $function = ProfessionalFunction::factory()->create();
+    $client = User::factory()->client()->paid()->create();
+    $client->brandProfile()->create(['company_name' => 'Acme'])->professionalFunctions()->attach($function);
+
+    foreach ([300 => 'Third', 90000 => 'First', 5000 => 'Second', 0 => 'Fourth'] as $score => $name) {
+        directoryProfile(['professional_function_id' => $function->id, 'score' => $score], ['name' => $name]);
+    }
+
+    Livewire::actingAs($client)->test('pages::client.dashboard')
+        ->assertSeeInOrder(['First', 'Second', 'Third', 'Fourth']);
+});
+
+it('keeps favourites off the dashboard and on their own page', function () {
+    $client = User::factory()->client()->paid()->create();
+    $client->favoriteFreelancers()->attach(directoryProfile(user: ['name' => 'Grace Hopper']));
+
+    Livewire::actingAs($client)->test('pages::client.dashboard')
+        ->assertDontSee('Favourites')
+        ->assertDontSee('Favorites');
+
+    $this->actingAs($client)->get(route('client.favorites'))
+        ->assertOk()
+        ->assertSee('Favourites')
+        ->assertSee('Grace Hopper');
+});
+
+it('says so when nothing is saved yet', function () {
+    Livewire::actingAs(User::factory()->client()->paid()->create())->test('pages::client.favorites')
+        ->assertSee('You have not saved anyone yet');
+});
+
+it('lets a saved freelancer be removed from the favourites page', function () {
+    $client = User::factory()->client()->paid()->create();
+    $client->favoriteFreelancers()->attach($profile = directoryProfile(user: ['name' => 'Grace Hopper']));
+
+    Livewire::actingAs($client)->test('pages::client.favorites')
+        ->assertSee('Grace Hopper')
+        ->call('toggleFavorite', $profile->id)
+        ->assertDontSee('Grace Hopper');
+});
+
+it('gives the favourites page to clients only', function () {
+    $this->actingAs(User::factory()->freelancer()->create())->get(route('client.favorites'))->assertForbidden();
+});
+
+it('shows the Favourites tab to brands only', function () {
+    $this->actingAs(User::factory()->client()->create())->get(route('client.dashboard'))
+        ->assertSee('href="'.route('client.favorites').'"', false);
+
+    $this->actingAs(User::factory()->freelancer()->create())->get(route('freelancer.dashboard'))
+        ->assertDontSee('href="'.route('client.favorites').'"', false);
 });

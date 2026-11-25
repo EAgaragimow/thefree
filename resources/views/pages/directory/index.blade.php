@@ -174,7 +174,7 @@ new #[Title('Freelancers')] class extends Component {
             return [
                 'full' => false,
                 'featured' => [],
-                'results' => app(DirectoryPreview::class)(auth()->user()->brandProfile),
+                'results' => app(DirectoryPreview::class)(auth()->user()->brandProfile)->sortByDesc('score')->values(),
                 'paginator' => null,
             ];
         }
@@ -277,7 +277,7 @@ new #[Title('Freelancers')] class extends Component {
         <section class="space-y-3">
             <flux:heading size="lg">Featured</flux:heading>
 
-            <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach ($listing['featured'] as $profile)
                     <x-freelancer-card
                         wire:key="featured-{{ $profile->id }}"
@@ -305,7 +305,7 @@ new #[Title('Freelancers')] class extends Component {
                 @endif
             </flux:callout>
         @else
-            <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach ($listing['results'] as $profile)
                     <x-freelancer-card
                         wire:key="profile-{{ $profile->id }}"

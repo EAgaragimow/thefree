@@ -105,3 +105,26 @@ it('ignores filters sent by a free client', function () {
         ->assertSee('Grace Hopper')
         ->assertSee('Alan Turing');
 });
+
+it('shows the newbie tag and the score on a card', function () {
+    directoryProfile(['is_newbie' => true, 'score' => 12345], ['name' => 'Fresh Face']);
+    directoryProfile(['score' => 987], ['name' => 'Old Hand']);
+
+    Livewire::actingAs(User::factory()->client()->paid()->create())
+        ->test('pages::directory.index')
+        ->assertSeeInOrder(['Fresh Face', 'Newbie', '12,345 pts', 'Old Hand', '987 pts']);
+
+    Livewire::actingAs(User::factory()->client()->paid()->create())
+        ->test('pages::directory.index')
+        ->assertSee('Newbie', 1);
+});
+
+it('lists the preview of a free client from the highest score to the lowest', function () {
+    foreach ([300 => 'Third', 90000 => 'First', 5000 => 'Second', 0 => 'Fourth'] as $score => $name) {
+        directoryProfile(['score' => $score], ['name' => $name]);
+    }
+
+    Livewire::actingAs(User::factory()->client()->create())
+        ->test('pages::directory.index')
+        ->assertSeeInOrder(['First', 'Second', 'Third', 'Fourth']);
+});
