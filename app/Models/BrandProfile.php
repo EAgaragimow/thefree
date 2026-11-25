@@ -43,9 +43,14 @@ class BrandProfile extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function categories(): BelongsToMany
+    public function professionalFunctions(): BelongsToMany
     {
-        return $this->belongsToMany(Category::class, 'brand_profile_category');
+        return $this->belongsToMany(ProfessionalFunction::class, 'brand_profile_professional_function');
+    }
+
+    public function professionalRoles(): BelongsToMany
+    {
+        return $this->belongsToMany(ProfessionalRole::class, 'brand_profile_professional_role');
     }
 
     public function skills(): BelongsToMany

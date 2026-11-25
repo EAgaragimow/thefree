@@ -1,8 +1,11 @@
 @props([
     'content',
     'user',
-    'categories' => [],
+    'professionalFunction' => null,
+    'roles' => [],
     'skills' => [],
+    'tools' => [],
+    'industries' => [],
 ])
 
 @php
@@ -56,25 +59,84 @@
         </section>
     @endif
 
-    @if (count($categories) || count($skills))
-        <section class="space-y-3">
-            @if (count($categories))
-                <div class="flex flex-wrap gap-2">
-                    @foreach ($categories as $category)
-                        <flux:badge color="blue">{{ $category }}</flux:badge>
-                    @endforeach
-                </div>
+    @if ($professionalFunction || count($roles))
+        <section class="flex flex-wrap gap-2">
+            @if ($professionalFunction)
+                <flux:badge color="blue">{{ $professionalFunction }}</flux:badge>
             @endif
+            @foreach ($roles as $role)
+                <flux:badge color="indigo">{{ $role }}</flux:badge>
+            @endforeach
+        </section>
+    @endif
 
-            @if (count($skills))
-                <div class="flex flex-wrap gap-2">
-                    @foreach ($skills as $skill)
-                        <flux:badge>{{ $skill }}</flux:badge>
-                    @endforeach
-                </div>
+    @php($hourlyRate = $content->get('hourly_rate_cents'))
+    @php($weeklyHours = \App\Enums\WeeklyHours::tryFrom((string) $content->get('weekly_hours')))
+
+    @if ($hourlyRate || $weeklyHours || $content->get('offers_monthly_retainers') !== null || $content->get('open_to_full_time') !== null)
+        <section class="space-y-3">
+            <flux:heading size="lg">Rates and availability</flux:heading>
+
+            <dl class="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+                @if ($hourlyRate)
+                    <div>
+                        <dt class="text-zinc-500">Hourly rate</dt>
+                        <dd class="font-medium">{{ $money($hourlyRate) }} / hour</dd>
+                    </div>
+                @endif
+                @if ($weeklyHours)
+                    <div>
+                        <dt class="text-zinc-500">Availability</dt>
+                        <dd class="font-medium">{{ $weeklyHours->label() }}</dd>
+                    </div>
+                @endif
+                @if ($content->get('open_to_full_time') !== null)
+                    <div>
+                        <dt class="text-zinc-500">Open to full-time opportunities</dt>
+                        <dd class="font-medium">{{ $content->get('open_to_full_time') ? 'Yes' : 'No' }}</dd>
+                    </div>
+                @endif
+                @if ($content->get('offers_monthly_retainers') !== null)
+                    <div>
+                        <dt class="text-zinc-500">Monthly retainers</dt>
+                        <dd class="font-medium">
+                            {{ $content->get('offers_monthly_retainers')
+                                ? collect(['Yes', $content->get('monthly_retainers_from_cents') ? 'from '.$money($content->get('monthly_retainers_from_cents')).' / month' : null])->filter()->implode(', ')
+                                : 'No' }}
+                        </dd>
+                    </div>
+                @endif
+            </dl>
+
+            @if ($content->get('offers_monthly_retainers') && $content->get('monthly_retainers_description'))
+                <flux:text class="whitespace-pre-line">{{ $content->get('monthly_retainers_description') }}</flux:text>
             @endif
         </section>
     @endif
+
+    @if (count($content->get('best_fit')))
+        <section class="space-y-2">
+            <flux:heading size="lg">Best fit for</flux:heading>
+            <ul class="list-disc space-y-1 ps-5 text-sm">
+                @foreach ($content->get('best_fit') as $line)
+                    <li>{{ $line }}</li>
+                @endforeach
+            </ul>
+        </section>
+    @endif
+
+    @foreach (['Skills' => $skills, 'Tools and platforms' => $tools, 'Industry experience' => $industries] as $heading => $names)
+        @if (count($names))
+            <section class="space-y-2">
+                <flux:heading size="lg">{{ $heading }}</flux:heading>
+                <div class="flex flex-wrap gap-2">
+                    @foreach ($names as $name)
+                        <flux:badge>{{ $name }}</flux:badge>
+                    @endforeach
+                </div>
+            </section>
+        @endif
+    @endforeach
 
     @php($offeredConsultations = array_values(array_filter($content->consultationOffers(), fn (array $offer): bool => $offer['enabled'])))
 

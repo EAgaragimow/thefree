@@ -3,10 +3,13 @@
 namespace App\Actions\Profiles;
 
 use App\Enums\ProfileStatus;
-use App\Models\Category;
 use App\Models\FreelancerProfile;
 use App\Models\FreelancerProfileRevision;
+use App\Models\Industry;
+use App\Models\ProfessionalFunction;
+use App\Models\ProfessionalRole;
 use App\Models\Skill;
+use App\Models\Tool;
 use Closure;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
@@ -18,7 +21,8 @@ class ApplyProfileRevision
     /**
      * Write an approved revision's content to the live profile and close the revision.
      *
-     * Categories or skills that were deleted while the revision was open are dropped silently.
+     * Catalog entries (function, roles, skills, tools, industries) that were deleted while the
+     * revision was open are dropped silently.
      * Highlights and services are updated in place by `id`; rows missing from the revision are
      * removed (soft-deleted for services) and new items are created. Consultations are updated by type.
      */
@@ -30,13 +34,21 @@ class ApplyProfileRevision
             $before = $profile->liveContent();
             $after = $revision->content();
 
-            $profile->fill($after->scalarAttributes());
+            // A function or role deleted while the revision was open is dropped silently, and
+            // the remaining roles move up so the main role is never empty before the others.
+            $functionId = ProfessionalFunction::query()->whereKey($after->professionalFunctionId())->value('id');
+            $knownRoleIds = ProfessionalRole::query()->whereIn('id', $after->roleIds())->pluck('id')->all();
+            $roleIds = array_values(array_filter($after->roleIds(), fn (int $id): bool => in_array($id, $knownRoleIds, true)));
+
+            $profile->fill([...$after->scalarAttributes(), 'professional_function_id' => $functionId]);
+            $profile->forceFill(ProfileContent::fromArray(['role_ids' => $roleIds])->roleAttributes());
             $profile->published_at ??= now();
             $profile->content_updated_at = now();
             $profile->save();
 
-            $profile->categories()->sync(Category::query()->whereIn('id', $after->categoryIds())->pluck('id')->all());
             $profile->skills()->sync(Skill::query()->whereIn('id', $after->skillIds())->pluck('id')->all());
+            $profile->tools()->sync(Tool::query()->whereIn('id', $after->toolIds())->pluck('id')->all());
+            $profile->industries()->sync(Industry::query()->whereIn('id', $after->industryIds())->pluck('id')->all());
 
             $profile->experiences()->delete();
 

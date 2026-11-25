@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\FreelancerProfiles;
 
+use App\Actions\Profiles\ProfileContent;
 use App\Filament\Resources\FreelancerProfiles\Pages\ListFreelancerProfiles;
 use App\Filament\Resources\FreelancerProfiles\Pages\ViewFreelancerProfile;
 use App\Filament\Resources\ProfileRevisions\ProfileRevisionResource;
@@ -52,8 +53,7 @@ class FreelancerProfileResource extends Resource
                 TextEntry::make('timezone'),
                 TextEntry::make('website')->placeholder('—'),
                 TextEntry::make('about')->placeholder('—')->columnSpanFull(),
-                TextEntry::make('categories.name')->label('Categories')->badge()->placeholder('—'),
-                TextEntry::make('skills.name')->label('Skills')->badge()->placeholder('—'),
+                ...ProfileRevisionResource::detailEntries(fn (FreelancerProfile $record): ProfileContent => $record->liveContent()),
                 TextEntry::make('consultations')
                     ->getStateUsing(fn (FreelancerProfile $record): array => ProfileRevisionResource::consultationLines($record->liveContent()))
                     ->listWithLineBreaks()

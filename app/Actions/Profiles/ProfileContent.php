@@ -5,6 +5,7 @@ namespace App\Actions\Profiles;
 use App\Enums\ConsultationType;
 use App\Enums\PricingMode;
 use App\Enums\Weekday;
+use App\Enums\WeeklyHours;
 use App\Models\FreelancerProfile;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Str;
@@ -37,8 +38,18 @@ use Illuminate\Support\Str;
  *     timezone: string,
  *     website: string|null,
  *     social_links: array<string, string>,
- *     category_ids: list<int>,
+ *     professional_function_id: int|null,
+ *     role_ids: list<int>,
  *     skill_ids: list<int>,
+ *     tool_ids: list<int>,
+ *     industry_ids: list<int>,
+ *     hourly_rate_cents: int|null,
+ *     offers_monthly_retainers: bool|null,
+ *     monthly_retainers_description: string|null,
+ *     monthly_retainers_from_cents: int|null,
+ *     weekly_hours: string|null,
+ *     open_to_full_time: bool|null,
+ *     best_fit: list<string>,
  *     experiences: list<Experience>,
  *     highlights: list<Highlight>,
  *     services: list<Service>,
@@ -57,7 +68,27 @@ final class ProfileContent
 
     public const MAX_LINKS = 5;
 
-    public const MAX_SERVICES = 20;
+    public const MAX_SERVICES = 3;
+
+    public const MAX_SERVICE_TITLE = 80;
+
+    public const MAX_SERVICE_DESCRIPTION = 200;
+
+    public const MAX_ROLES = 3;
+
+    public const MIN_SKILLS = 3;
+
+    public const MAX_SKILLS = 15;
+
+    public const MIN_TOOLS = 2;
+
+    public const MAX_TOOLS = 20;
+
+    public const MAX_INDUSTRIES = 10;
+
+    public const MAX_BEST_FIT = 3;
+
+    public const MAX_BEST_FIT_LENGTH = 255;
 
     public const MIN_CONSULTATION_MINUTES = 15;
 
@@ -81,6 +112,14 @@ final class ProfileContent
         'timezone',
         'website',
         'social_links',
+        'professional_function_id',
+        'hourly_rate_cents',
+        'offers_monthly_retainers',
+        'monthly_retainers_description',
+        'monthly_retainers_from_cents',
+        'weekly_hours',
+        'open_to_full_time',
+        'best_fit',
     ];
 
     /**
@@ -98,8 +137,18 @@ final class ProfileContent
             'timezone' => $profile->timezone,
             'website' => $profile->website,
             'social_links' => $profile->social_links ?? [],
-            'category_ids' => $profile->categories()->pluck('categories.id')->all(),
+            'professional_function_id' => $profile->professional_function_id,
+            'role_ids' => array_values(array_filter([$profile->main_role_id, $profile->secondary_role_id, $profile->third_role_id])),
             'skill_ids' => $profile->skills()->pluck('skills.id')->all(),
+            'tool_ids' => $profile->tools()->pluck('tools.id')->all(),
+            'industry_ids' => $profile->industries()->pluck('industries.id')->all(),
+            'hourly_rate_cents' => $profile->hourly_rate_cents,
+            'offers_monthly_retainers' => $profile->offers_monthly_retainers,
+            'monthly_retainers_description' => $profile->monthly_retainers_description,
+            'monthly_retainers_from_cents' => $profile->monthly_retainers_from_cents,
+            'weekly_hours' => $profile->weekly_hours?->value,
+            'open_to_full_time' => $profile->open_to_full_time,
+            'best_fit' => $profile->best_fit ?? [],
             'experiences' => $profile->experiences()->get()->map(fn ($experience): array => [
                 'company' => $experience->company,
                 'role' => $experience->role,
@@ -148,6 +197,8 @@ final class ProfileContent
             ->values()
             ->all();
 
+        $retainers = self::nullableBoolean($payload['offers_monthly_retainers'] ?? null);
+
         return new self([
             'v' => self::VERSION,
             'photo_path' => self::nullable($payload['photo_path'] ?? null),
@@ -161,8 +212,23 @@ final class ProfileContent
                 ->map(fn ($url): string => (string) $url)
                 ->sortKeys()
                 ->all(),
-            'category_ids' => $ids($payload['category_ids'] ?? []),
+            'professional_function_id' => filled($payload['professional_function_id'] ?? null) ? (int) $payload['professional_function_id'] : null,
+            // Order matters for roles: the first is the main role, then secondary, then third.
+            'role_ids' => collect($payload['role_ids'] ?? [])->map(fn ($id): int => (int) $id)->unique()->values()->all(),
             'skill_ids' => $ids($payload['skill_ids'] ?? []),
+            'tool_ids' => $ids($payload['tool_ids'] ?? []),
+            'industry_ids' => $ids($payload['industry_ids'] ?? []),
+            'hourly_rate_cents' => filled($payload['hourly_rate_cents'] ?? null) ? (int) $payload['hourly_rate_cents'] : null,
+            'offers_monthly_retainers' => $retainers,
+            'monthly_retainers_description' => $retainers === true ? self::nullable($payload['monthly_retainers_description'] ?? null) : null,
+            'monthly_retainers_from_cents' => $retainers === true && filled($payload['monthly_retainers_from_cents'] ?? null) ? (int) $payload['monthly_retainers_from_cents'] : null,
+            'weekly_hours' => WeeklyHours::tryFrom((string) ($payload['weekly_hours'] ?? ''))?->value,
+            'open_to_full_time' => self::nullableBoolean($payload['open_to_full_time'] ?? null),
+            'best_fit' => collect($payload['best_fit'] ?? [])
+                ->map(fn ($line): string => trim((string) $line))
+                ->filter()
+                ->values()
+                ->all(),
             'experiences' => collect($payload['experiences'] ?? [])->map(fn (array $experience): array => [
                 'company' => (string) $experience['company'],
                 'role' => (string) $experience['role'],
@@ -200,12 +266,49 @@ final class ProfileContent
         return array_intersect_key($this->data, array_flip(self::SCALAR_FIELDS));
     }
 
+    public function professionalFunctionId(): ?int
+    {
+        return $this->data['professional_function_id'];
+    }
+
+    /**
+     * Selected role ids in the order they were picked: main, secondary, third.
+     *
+     * @return list<int>
+     */
+    public function roleIds(): array
+    {
+        return $this->data['role_ids'];
+    }
+
+    /**
+     * The technical role columns of the live profile, derived from the ordered role selection.
+     *
+     * @return array{main_role_id: int|null, secondary_role_id: int|null, third_role_id: int|null}
+     */
+    public function roleAttributes(): array
+    {
+        return [
+            'main_role_id' => $this->data['role_ids'][0] ?? null,
+            'secondary_role_id' => $this->data['role_ids'][1] ?? null,
+            'third_role_id' => $this->data['role_ids'][2] ?? null,
+        ];
+    }
+
     /**
      * @return list<int>
      */
-    public function categoryIds(): array
+    public function toolIds(): array
     {
-        return $this->data['category_ids'];
+        return $this->data['tool_ids'];
+    }
+
+    /**
+     * @return list<int>
+     */
+    public function industryIds(): array
+    {
+        return $this->data['industry_ids'];
     }
 
     /**
@@ -297,9 +400,19 @@ final class ProfileContent
     {
         $problems = [];
 
+        if (count($this->data['services']) > self::MAX_SERVICES) {
+            $problems[] = 'You can list at most '.self::MAX_SERVICES.' services.';
+        }
+
         foreach ($this->data['services'] as $service) {
             if (blank($service['title'])) {
                 $problems[] = 'Every service needs a title.';
+            } elseif (mb_strlen($service['title']) > self::MAX_SERVICE_TITLE) {
+                $problems[] = "The service \"{$service['title']}\" has a title longer than ".self::MAX_SERVICE_TITLE.' characters.';
+            }
+
+            if (mb_strlen((string) $service['description']) > self::MAX_SERVICE_DESCRIPTION) {
+                $problems[] = "The description of the service \"{$service['title']}\" is longer than ".self::MAX_SERVICE_DESCRIPTION.' characters.';
             }
 
             if (PricingMode::from($service['pricing_mode'])->requiresPrice() && ($service['price_cents'] ?? 0) < 1) {
@@ -324,6 +437,66 @@ final class ProfileContent
         }
 
         return array_values(array_unique($problems));
+    }
+
+    /**
+     * What is missing or out of range in the profile details before they can be reviewed, keyed
+     * by the name of the form field that needs attention.
+     *
+     * @return array<string, string>
+     */
+    public function detailProblems(): array
+    {
+        $problems = [];
+        $count = fn (string $key): int => count($this->data[$key]);
+
+        if ($this->data['professional_function_id'] === null) {
+            $problems['professional_function_id'] = 'Select your function before submitting.';
+        }
+
+        if ($count('role_ids') < 1) {
+            $problems['role_ids'] = 'Select at least one role before submitting.';
+        } elseif ($count('role_ids') > self::MAX_ROLES) {
+            $problems['role_ids'] = 'Select at most '.self::MAX_ROLES.' roles.';
+        }
+
+        if ($count('skill_ids') < self::MIN_SKILLS || $count('skill_ids') > self::MAX_SKILLS) {
+            $problems['skill_ids'] = 'Select between '.self::MIN_SKILLS.' and '.self::MAX_SKILLS.' skills before submitting.';
+        }
+
+        if ($count('tool_ids') < self::MIN_TOOLS || $count('tool_ids') > self::MAX_TOOLS) {
+            $problems['tool_ids'] = 'Select between '.self::MIN_TOOLS.' and '.self::MAX_TOOLS.' tools before submitting.';
+        }
+
+        if ($count('industry_ids') > self::MAX_INDUSTRIES) {
+            $problems['industry_ids'] = 'Select at most '.self::MAX_INDUSTRIES.' industries.';
+        }
+
+        if (($this->data['hourly_rate_cents'] ?? 0) < 1) {
+            $problems['hourly_rate'] = 'Enter your hourly rate before submitting.';
+        }
+
+        if ($this->data['offers_monthly_retainers'] === null) {
+            $problems['offers_monthly_retainers'] = 'Tell us whether you offer monthly retainers before submitting.';
+        } elseif ($this->data['offers_monthly_retainers']) {
+            if (blank($this->data['monthly_retainers_description'])) {
+                $problems['monthly_retainers_description'] = 'Describe the scope of your monthly retainer before submitting.';
+            }
+
+            if (($this->data['monthly_retainers_from_cents'] ?? 0) < 1) {
+                $problems['monthly_retainers_from'] = 'Enter the price your retainers start at before submitting.';
+            }
+        }
+
+        if ($this->data['weekly_hours'] === null) {
+            $problems['weekly_hours'] = 'Select how many hours per week you are available before submitting.';
+        }
+
+        if ($this->data['open_to_full_time'] === null) {
+            $problems['open_to_full_time'] = 'Tell us whether you are open to full-time opportunities before submitting.';
+        }
+
+        return $problems;
     }
 
     /**
@@ -487,6 +660,11 @@ final class ProfileContent
     private static function itemUid(array $item, ?int $id): string
     {
         return (string) ($item['uid'] ?? ($id !== null ? "live-{$id}" : 'new-'.Str::lower(Str::random(12))));
+    }
+
+    private static function nullableBoolean(mixed $value): ?bool
+    {
+        return $value === null || $value === '' ? null : filter_var($value, FILTER_VALIDATE_BOOLEAN);
     }
 
     private static function nullable(mixed $value): ?string

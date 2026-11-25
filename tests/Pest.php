@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\FreelancerProfile;
+use Database\Factories\FreelancerProfileRevisionFactory;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
@@ -47,4 +49,26 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+/**
+ * Give a live profile every catalog selection and answer needed to submit it for review.
+ */
+function completeLiveProfile(FreelancerProfile $profile): FreelancerProfile
+{
+    $details = FreelancerProfileRevisionFactory::completeDetails();
+
+    $profile->forceFill([
+        'professional_function_id' => $details['professional_function_id'],
+        'main_role_id' => $details['role_ids'][0],
+        'hourly_rate_cents' => $details['hourly_rate_cents'],
+        'offers_monthly_retainers' => $details['offers_monthly_retainers'],
+        'weekly_hours' => $details['weekly_hours'],
+        'open_to_full_time' => $details['open_to_full_time'],
+    ])->save();
+
+    $profile->skills()->sync($details['skill_ids']);
+    $profile->tools()->sync($details['tool_ids']);
+
+    return $profile;
 }

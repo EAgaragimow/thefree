@@ -1,8 +1,8 @@
 <?php
 
 use App\Models\BrandProfile;
-use App\Models\Category;
-use App\Models\Skill;
+use App\Models\ProfessionalFunction;
+use App\Models\ProfessionalRole;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -10,8 +10,8 @@ use Livewire\Livewire;
 
 it('creates a private brand profile with interests', function () {
     $user = User::factory()->client()->create();
-    $categories = Category::factory()->count(2)->create();
-    $skill = Skill::factory()->create();
+    $functions = ProfessionalFunction::factory()->count(2)->create();
+    $role = ProfessionalRole::factory()->for($functions[0], 'professionalFunction')->create();
 
     Livewire::actingAs($user)
         ->test('pages::client.brand-profile')
@@ -21,8 +21,8 @@ it('creates a private brand profile with interests', function () {
         ->set('website', 'https://acme.test')
         ->set('linkedin', 'https://linkedin.com/company/acme')
         ->set('contact_email', 'hello@acme.test')
-        ->set('category_ids', $categories->pluck('id')->map(fn ($id) => (string) $id)->all())
-        ->set('skill_ids', [(string) $skill->id])
+        ->set('function_ids', $functions->pluck('id')->map(fn ($id) => (string) $id)->all())
+        ->set('role_ids', [(string) $role->id])
         ->call('save')
         ->assertHasNoErrors()
         ->assertSet('saved', true);
@@ -31,8 +31,8 @@ it('creates a private brand profile with interests', function () {
 
     expect($profile->company_name)->toBe('Acme Inc.')
         ->and($profile->social_links)->toBe(['linkedin' => 'https://linkedin.com/company/acme'])
-        ->and($profile->categories->pluck('id')->all())->toEqualCanonicalizing($categories->pluck('id')->all())
-        ->and($profile->skills->pluck('id')->all())->toBe([$skill->id]);
+        ->and($profile->professionalFunctions->pluck('id')->all())->toEqualCanonicalizing($functions->pluck('id')->all())
+        ->and($profile->professionalRoles->pluck('id')->all())->toBe([$role->id]);
 });
 
 it('updates the existing brand profile instead of creating a second one', function () {
@@ -62,13 +62,61 @@ it('requires a company name and valid urls and emails', function () {
     expect(BrandProfile::count())->toBe(0);
 });
 
-it('rejects a category that does not exist', function () {
+it('rejects a function that does not exist', function () {
     Livewire::actingAs(User::factory()->client()->create())
         ->test('pages::client.brand-profile')
         ->set('company_name', 'Acme')
-        ->set('category_ids', ['9999'])
+        ->set('function_ids', ['9999'])
         ->call('save')
-        ->assertHasErrors('category_ids.0');
+        ->assertHasErrors('function_ids.0');
+});
+
+it('lists only the roles of the selected functions, grouped by function', function () {
+    $paid = ProfessionalFunction::factory()->create(['name' => 'Paid Media', 'sort_order' => 1]);
+    $creative = ProfessionalFunction::factory()->create(['name' => 'Creative', 'sort_order' => 2]);
+    $paidRole = ProfessionalRole::factory()->for($paid, 'professionalFunction')->create(['name' => 'Paid Social Marketer']);
+    ProfessionalRole::factory()->for($creative, 'professionalFunction')->create(['name' => 'Copywriter']);
+
+    Livewire::actingAs(User::factory()->client()->create())
+        ->test('pages::client.brand-profile')
+        ->assertSet('function_ids', [])
+        ->assertDontSee('Paid Social Marketer')
+        ->set('function_ids', [(string) $paid->id])
+        ->assertSee('Paid Social Marketer')
+        ->assertDontSee('Copywriter')
+        ->assertSee('Paid Media')
+        ->assertSet('function_ids', [(string) $paid->id])
+        ->set('role_ids', [(string) $paidRole->id])
+        ->assertSet('role_ids', [(string) $paidRole->id]);
+});
+
+it('drops a selected role when its function is deselected', function () {
+    $paid = ProfessionalFunction::factory()->create();
+    $creative = ProfessionalFunction::factory()->create();
+    $paidRole = ProfessionalRole::factory()->for($paid, 'professionalFunction')->create();
+    $creativeRole = ProfessionalRole::factory()->for($creative, 'professionalFunction')->create();
+
+    Livewire::actingAs(User::factory()->client()->create())
+        ->test('pages::client.brand-profile')
+        ->set('function_ids', [(string) $paid->id, (string) $creative->id])
+        ->set('role_ids', [(string) $paidRole->id, (string) $creativeRole->id])
+        ->set('function_ids', [(string) $creative->id])
+        ->assertSet('role_ids', [(string) $creativeRole->id]);
+});
+
+it('rejects a role that does not belong to a selected function', function () {
+    $paid = ProfessionalFunction::factory()->create();
+    $otherRole = ProfessionalRole::factory()->create();
+
+    Livewire::actingAs(User::factory()->client()->create())
+        ->test('pages::client.brand-profile')
+        ->set('company_name', 'Acme')
+        ->set('function_ids', [(string) $paid->id])
+        ->set('role_ids', [(string) $otherRole->id])
+        ->call('save')
+        ->assertHasErrors('role_ids.0');
+
+    expect(BrandProfile::count())->toBe(0);
 });
 
 it('stores the uploaded logo and removes the replaced one', function () {

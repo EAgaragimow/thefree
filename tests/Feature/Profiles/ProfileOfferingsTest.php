@@ -1,17 +1,21 @@
 <?php
 
 use App\Actions\Profiles\ApplyProfileRevision;
+use App\Actions\Profiles\ProfileContent;
 use App\Actions\Profiles\SubmitProfileForReview;
 use App\Actions\Profiles\UpdateProfileContent;
 use App\Enums\PricingMode;
 use App\Enums\ProfileStatus;
-use App\Models\Category;
 use App\Models\ConsultationOffer;
 use App\Models\FreelancerProfile;
 use App\Models\FreelancerProfileRevision;
 use App\Models\Highlight;
+use App\Models\Industry;
+use App\Models\ProfessionalRole;
 use App\Models\Service;
 use App\Models\Skill;
+use App\Models\Tool;
+use Database\Factories\FreelancerProfileRevisionFactory;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
@@ -202,11 +206,91 @@ it('goes back to published when offer edits are reverted', function () {
         ->and($profile->refresh()->displayStatus())->toBe(ProfileStatus::Published);
 });
 
+it('refuses to submit more than three services or services that are too long', function () {
+    $profile = FreelancerProfile::factory()->create();
+    $services = array_map(fn (int $i): array => ['title' => "Service {$i}", 'pricing_mode' => 'custom-quote'], range(1, 4));
+    $services[0]['title'] = str_repeat('t', 81);
+    $services[1]['description'] = str_repeat('d', 201);
+    FreelancerProfileRevision::factory()->draft()->create([
+        'freelancer_profile_id' => $profile->id,
+        'payload' => ['professional_title' => 'Designer', 'about' => str_repeat('About me. ', 10), 'location' => 'Kyiv', ...FreelancerProfileRevisionFactory::completeDetails(), 'services' => $services],
+    ]);
+
+    try {
+        app(SubmitProfileForReview::class)($profile);
+        $this->fail('Expected a validation exception.');
+    } catch (ValidationException $exception) {
+        expect($exception->errors()['content'][0])
+            ->toContain('You can list at most 3 services.')
+            ->toContain('has a title longer than 80 characters')
+            ->toContain('is longer than 200 characters');
+    }
+});
+
+it('refuses to submit a retainer without a description or a starting price', function () {
+    $profile = FreelancerProfile::factory()->create();
+    FreelancerProfileRevision::factory()->draft()->create([
+        'freelancer_profile_id' => $profile->id,
+        'payload' => ['professional_title' => 'Designer', 'about' => str_repeat('About me. ', 10), 'location' => 'Kyiv', ...FreelancerProfileRevisionFactory::completeDetails(), 'offers_monthly_retainers' => true],
+    ]);
+
+    try {
+        app(SubmitProfileForReview::class)($profile);
+        $this->fail('Expected a validation exception.');
+    } catch (ValidationException $exception) {
+        expect(array_keys($exception->errors()))->toEqualCanonicalizing(['monthly_retainers_description', 'monthly_retainers_from']);
+    }
+});
+
+it('refuses to submit when a selection is below its minimum or above its maximum', function () {
+    $profile = FreelancerProfile::factory()->create();
+    FreelancerProfileRevision::factory()->draft()->create([
+        'freelancer_profile_id' => $profile->id,
+        'payload' => [
+            'professional_title' => 'Designer', 'about' => str_repeat('About me. ', 10), 'location' => 'Kyiv',
+            ...FreelancerProfileRevisionFactory::completeDetails(),
+            'skill_ids' => Skill::factory()->count(2)->create()->modelKeys(),
+            'tool_ids' => Tool::factory()->count(21)->create()->modelKeys(),
+            'role_ids' => ProfessionalRole::factory()->count(4)->create()->modelKeys(),
+            'industry_ids' => Industry::factory()->count(11)->create()->modelKeys(),
+        ],
+    ]);
+
+    try {
+        app(SubmitProfileForReview::class)($profile);
+        $this->fail('Expected a validation exception.');
+    } catch (ValidationException $exception) {
+        expect(array_keys($exception->errors()))->toEqualCanonicalizing(['skill_ids', 'tool_ids', 'role_ids', 'industry_ids']);
+    }
+});
+
+it('normalizes the profile detail fields', function () {
+    $content = ProfileContent::fromArray([
+        'professional_function_id' => '7',
+        'role_ids' => ['3', '1', '3', '2'],
+        'offers_monthly_retainers' => false,
+        'monthly_retainers_description' => 'Stale text',
+        'monthly_retainers_from_cents' => 5000,
+        'weekly_hours' => 'unknown',
+        'open_to_full_time' => '',
+        'best_fit' => ['  First  ', '', 'Second'],
+    ]);
+
+    expect($content->professionalFunctionId())->toBe(7)
+        ->and($content->roleIds())->toBe([3, 1, 2])
+        ->and($content->roleAttributes())->toBe(['main_role_id' => 3, 'secondary_role_id' => 1, 'third_role_id' => 2])
+        ->and($content->get('monthly_retainers_description'))->toBeNull()
+        ->and($content->get('monthly_retainers_from_cents'))->toBeNull()
+        ->and($content->get('weekly_hours'))->toBeNull()
+        ->and($content->get('open_to_full_time'))->toBeNull()
+        ->and($content->get('best_fit'))->toBe(['First', 'Second']);
+});
+
 it('refuses to submit offers that cannot be reviewed', function () {
     $profile = FreelancerProfile::factory()->create();
     FreelancerProfileRevision::factory()->draft()->create([
         'freelancer_profile_id' => $profile->id,
-        'payload' => ['professional_title' => 'Designer', 'about' => str_repeat('About me. ', 10), 'location' => 'Kyiv', 'category_ids' => [Category::factory()->create()->id], 'skill_ids' => [Skill::factory()->create()->id], 'services' => [['title' => 'Branding', 'pricing_mode' => 'fixed']]],
+        'payload' => ['professional_title' => 'Designer', 'about' => str_repeat('About me. ', 10), 'location' => 'Kyiv', ...FreelancerProfileRevisionFactory::completeDetails(), 'services' => [['title' => 'Branding', 'pricing_mode' => 'fixed']]],
     ]);
 
     try {

@@ -8,6 +8,7 @@ use App\Enums\ProfileStatus;
 use App\Enums\UserRole;
 use App\Models\FreelancerApplication;
 use App\Models\FreelancerProfile;
+use App\Models\ProfessionalRole;
 use App\Models\Skill;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -58,15 +59,26 @@ class ActivateFreelancerAccount
             $profile->application()->associate($application);
             $profile->save();
 
-            $skillIds = collect($application->skills ?? [])
-                ->map(fn ($name) => trim((string) $name))
+            // The application lists skills as free text. Only those that match the skill catalog
+            // are carried over; the catalog is curated, so unknown names are never added to it.
+            $skillIds = Skill::query()
+                ->whereIn('slug', collect($application->skills ?? [])
+                    ->map(fn ($name): string => Str::slug(trim((string) $name)))
+                    ->filter()
+                    ->unique()
+                    ->all())
+                ->limit(ProfileContent::MAX_SKILLS)
+                ->pluck('id')
+                ->all();
+
+            // The application keeps the picked roles by name, in pick order. They go into the draft in
+            // that order, so the profile's main, secondary and third role follow when it is approved.
+            $roleIds = collect($application->roles ?? [])
+                ->map(fn ($name): ?int => ProfessionalRole::query()->where('slug', Str::slug(trim((string) $name)))->value('id'))
                 ->filter()
                 ->unique()
-                ->take(20)
-                ->map(fn (string $name) => Skill::query()->firstOrCreate(
-                    ['slug' => Str::slug($name)],
-                    ['name' => $name],
-                )->id)
+                ->take(ProfileContent::MAX_ROLES)
+                ->values()
                 ->all();
 
             $profile->revisions()->create([
@@ -78,6 +90,7 @@ class ActivateFreelancerAccount
                     'timezone' => 'UTC',
                     'website' => $application->portfolio_links[0] ?? null,
                     'social_links' => $application->social_links ?? [],
+                    'role_ids' => $roleIds,
                     'skill_ids' => $skillIds,
                 ])->toArray(),
             ]);

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Actions\Profiles\ProfileContent;
 use App\Enums\ProfileStatus;
+use App\Enums\WeeklyHours;
 use Database\Factories\FreelancerProfileFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -31,6 +32,14 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
     'timezone',
     'website',
     'social_links',
+    'professional_function_id',
+    'hourly_rate_cents',
+    'offers_monthly_retainers',
+    'monthly_retainers_description',
+    'monthly_retainers_from_cents',
+    'weekly_hours',
+    'open_to_full_time',
+    'best_fit',
 ])]
 class FreelancerProfile extends Model
 {
@@ -56,6 +65,12 @@ class FreelancerProfile extends Model
     {
         return [
             'social_links' => 'array',
+            'best_fit' => 'array',
+            'hourly_rate_cents' => 'integer',
+            'monthly_retainers_from_cents' => 'integer',
+            'offers_monthly_retainers' => 'boolean',
+            'open_to_full_time' => 'boolean',
+            'weekly_hours' => WeeklyHours::class,
             'published_at' => 'datetime',
             'content_updated_at' => 'datetime',
             'featured_at' => 'datetime',
@@ -73,14 +88,43 @@ class FreelancerProfile extends Model
         return $this->belongsTo(FreelancerApplication::class, 'freelancer_application_id');
     }
 
-    public function categories(): BelongsToMany
+    public function professionalFunction(): BelongsTo
     {
-        return $this->belongsToMany(Category::class, 'category_freelancer_profile');
+        return $this->belongsTo(ProfessionalFunction::class);
+    }
+
+    /**
+     * Main role: the first role the freelancer picked. It is a technical field filled from the
+     * "roles" selection, not edited directly.
+     */
+    public function mainRole(): BelongsTo
+    {
+        return $this->belongsTo(ProfessionalRole::class, 'main_role_id');
+    }
+
+    public function secondaryRole(): BelongsTo
+    {
+        return $this->belongsTo(ProfessionalRole::class, 'secondary_role_id');
+    }
+
+    public function thirdRole(): BelongsTo
+    {
+        return $this->belongsTo(ProfessionalRole::class, 'third_role_id');
     }
 
     public function skills(): BelongsToMany
     {
         return $this->belongsToMany(Skill::class, 'freelancer_profile_skill');
+    }
+
+    public function tools(): BelongsToMany
+    {
+        return $this->belongsToMany(Tool::class, 'freelancer_profile_tool');
+    }
+
+    public function industries(): BelongsToMany
+    {
+        return $this->belongsToMany(Industry::class, 'freelancer_profile_industry');
     }
 
     public function experiences(): HasMany

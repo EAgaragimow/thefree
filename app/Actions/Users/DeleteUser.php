@@ -13,7 +13,8 @@ class DeleteUser
     public function __construct(private RecordAuditLog $audit) {}
 
     /**
-     * Soft-delete a user account, e.g. to fulfil a personal-data deletion request.
+     * Soft-delete a user account, e.g. to fulfil a personal-data deletion request. The brand or
+     * freelancer profile linked to the account is deleted with it.
      *
      * @throws DomainException
      * @throws ValidationException
@@ -39,11 +40,21 @@ class DeleteUser
 
             $wasRequestedByUser = $locked->deletion_requested_at !== null;
 
+            $removedProfiles = collect([
+                'brand' => $locked->brandProfile,
+                'freelancer' => $locked->freelancerProfile,
+            ])->filter();
+
+            // The user row is only soft-deleted, so the database cascade does not fire: remove the
+            // linked profiles explicitly (their highlights, services, revisions etc. cascade from them).
+            $removedProfiles->each->delete();
+
             $locked->delete();
 
             ($this->audit)('user.deleted', $locked, $reason, [
                 'role' => $locked->role->value,
                 'deletion_requested_by_user' => $wasRequestedByUser,
+                'removed_profiles' => $removedProfiles->keys()->all(),
             ], $admin);
         });
     }

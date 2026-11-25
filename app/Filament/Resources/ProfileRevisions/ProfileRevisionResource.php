@@ -12,10 +12,14 @@ use App\Enums\ProfileStatus;
 use App\Filament\Resources\ProfileRevisions\Pages\ListProfileRevisions;
 use App\Filament\Resources\ProfileRevisions\Pages\ViewProfileRevision;
 use App\Filament\Support\RunsAdminAction;
-use App\Models\Category;
 use App\Models\FreelancerProfileRevision;
+use App\Models\Industry;
+use App\Models\ProfessionalFunction;
+use App\Models\ProfessionalRole;
 use App\Models\Skill;
+use App\Models\Tool;
 use BackedEnum;
+use Closure;
 use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Textarea;
@@ -64,14 +68,7 @@ class ProfileRevisionResource extends Resource
                 TextEntry::make('payload.timezone')->label('Time zone'),
                 TextEntry::make('payload.website')->label('Website')->placeholder('—'),
                 TextEntry::make('payload.about')->label('About')->placeholder('—')->columnSpanFull(),
-                TextEntry::make('categories')
-                    ->getStateUsing(fn (FreelancerProfileRevision $record): array => Category::query()->whereIn('id', $record->content()->categoryIds())->pluck('name')->all())
-                    ->badge()
-                    ->placeholder('—'),
-                TextEntry::make('skills')
-                    ->getStateUsing(fn (FreelancerProfileRevision $record): array => Skill::query()->whereIn('id', $record->content()->skillIds())->pluck('name')->all())
-                    ->badge()
-                    ->placeholder('—'),
+                ...self::detailEntries(fn (FreelancerProfileRevision $record): ProfileContent => $record->content()),
                 TextEntry::make('experiences')
                     ->label('Work history')
                     ->getStateUsing(fn (FreelancerProfileRevision $record): array => collect($record->content()->experiences())
@@ -167,6 +164,85 @@ class ProfileRevisionResource extends Resource
     }
 
     /**
+     * The catalog selections and the rates and availability answers of a profile, shared by the
+     * revision view and the live profile view.
+     *
+     * @param  Closure(mixed): ProfileContent  $content  Resolves the content to show from the record.
+     * @return list<TextEntry>
+     */
+    public static function detailEntries(Closure $content): array
+    {
+        $names = fn (string $model, array $ids): array => $model::query()->whereIn('id', $ids)->orderBy('name')->pluck('name')->all();
+        $dollars = fn (?int $cents): ?string => $cents === null ? null : '$'.number_format($cents / 100, 2);
+        $yesNo = fn (?bool $value): ?string => $value === null ? null : ($value ? 'Yes' : 'No');
+
+        return [
+            TextEntry::make('function')
+                ->getStateUsing(fn ($record): ?string => ProfessionalFunction::query()->whereKey($content($record)->professionalFunctionId())->value('name'))
+                ->placeholder('—'),
+            TextEntry::make('roles')
+                ->label('Roles')
+                ->getStateUsing(function ($record) use ($content): array {
+                    $roleIds = $content($record)->roleIds();
+                    $roles = ProfessionalRole::query()->whereIn('id', $roleIds)->pluck('name', 'id');
+
+                    return collect($roleIds)
+                        ->map(fn (int $id, int $position): string => ['main-role', 'secondary-role', 'third-role'][$position].': '.$roles->get($id))
+                        ->all();
+                })
+                ->badge()
+                ->placeholder('—'),
+            TextEntry::make('skills')
+                ->getStateUsing(fn ($record): array => $names(Skill::class, $content($record)->skillIds()))
+                ->badge()
+                ->placeholder('—')
+                ->columnSpanFull(),
+            TextEntry::make('tools')
+                ->getStateUsing(fn ($record): array => $names(Tool::class, $content($record)->toolIds()))
+                ->badge()
+                ->placeholder('—')
+                ->columnSpanFull(),
+            TextEntry::make('industries')
+                ->getStateUsing(fn ($record): array => $names(Industry::class, $content($record)->industryIds()))
+                ->badge()
+                ->placeholder('—')
+                ->columnSpanFull(),
+            TextEntry::make('hourly_rate')
+                ->getStateUsing(fn ($record): ?string => $dollars($content($record)->get('hourly_rate_cents')))
+                ->placeholder('—'),
+            TextEntry::make('weekly_hours')
+                ->label('Hours per week')
+                ->getStateUsing(fn ($record): ?string => $content($record)->get('weekly_hours'))
+                ->placeholder('—'),
+            TextEntry::make('open_to_full_time')
+                ->label('Open to full-time')
+                ->getStateUsing(fn ($record): ?string => $yesNo($content($record)->get('open_to_full_time')))
+                ->placeholder('—'),
+            TextEntry::make('monthly_retainers')
+                ->getStateUsing(function ($record) use ($content, $dollars, $yesNo): ?string {
+                    $content = $content($record);
+
+                    return collect([
+                        $yesNo($content->get('offers_monthly_retainers')),
+                        $content->get('monthly_retainers_from_cents') ? 'from '.$dollars($content->get('monthly_retainers_from_cents')).' / month' : null,
+                    ])->filter()->implode(', ') ?: null;
+                })
+                ->placeholder('—'),
+            TextEntry::make('monthly_retainers_description')
+                ->label('Retainer scope')
+                ->getStateUsing(fn ($record): ?string => $content($record)->get('monthly_retainers_description'))
+                ->placeholder('—')
+                ->columnSpanFull(),
+            TextEntry::make('best_fit')
+                ->label('Best fit for')
+                ->getStateUsing(fn ($record): array => $content($record)->get('best_fit'))
+                ->listWithLineBreaks()
+                ->placeholder('—')
+                ->columnSpanFull(),
+        ];
+    }
+
+    /**
      * @return list<string>
      */
     public static function consultationLines(ProfileContent $content): array
@@ -251,8 +327,18 @@ class ProfileRevisionResource extends Resource
             'timezone' => 'Time zone',
             'website' => 'Website',
             'social_links' => 'Social links',
-            'category_ids' => 'Categories',
+            'professional_function_id' => 'Function',
+            'role_ids' => 'Roles',
             'skill_ids' => 'Skills',
+            'tool_ids' => 'Tools',
+            'industry_ids' => 'Industries',
+            'hourly_rate_cents' => 'Hourly rate',
+            'offers_monthly_retainers' => 'Monthly retainers',
+            'monthly_retainers_description' => 'Retainer scope',
+            'monthly_retainers_from_cents' => 'Retainer starting price',
+            'weekly_hours' => 'Hours per week',
+            'open_to_full_time' => 'Open to full-time',
+            'best_fit' => 'Best fit',
             'experiences' => 'Work history',
             'highlights' => 'Highlights',
             'services' => 'Services',

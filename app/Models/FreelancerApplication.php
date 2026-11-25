@@ -17,7 +17,11 @@ use Illuminate\Notifications\Notifiable;
     'full_name',
     'phone',
     'location',
+    'country',
+    'state',
+    'city',
     'specialty',
+    'roles',
     'years_experience',
     'experience_summary',
     'about',
@@ -49,6 +53,7 @@ class FreelancerApplication extends Model
     {
         return [
             'status' => ApplicationStatus::class,
+            'roles' => 'array',
             'skills' => 'array',
             'portfolio_links' => 'array',
             'social_links' => 'array',

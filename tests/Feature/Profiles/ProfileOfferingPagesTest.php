@@ -6,7 +6,12 @@ use App\Models\ConsultationOffer;
 use App\Models\FreelancerProfile;
 use App\Models\FreelancerProfileRevision;
 use App\Models\Highlight;
+use App\Models\Industry;
+use App\Models\ProfessionalFunction;
+use App\Models\ProfessionalRole;
 use App\Models\Service;
+use App\Models\Skill;
+use App\Models\Tool;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -126,7 +131,23 @@ it('validates a service', function (array $input, string|array $errors) {
     'too many decimals' => [['title' => 'A', 'pricing_mode' => 'fixed', 'price' => '10.999'], 'price'],
     'text price' => [['title' => 'A', 'pricing_mode' => 'fixed', 'price' => 'free'], 'price'],
     'unknown mode' => [['title' => 'A', 'pricing_mode' => 'barter'], 'pricing_mode'],
+    'title over 80 characters' => [['title' => str_repeat('t', 81), 'pricing_mode' => 'custom-quote'], 'title'],
+    'description over 200 characters' => [['title' => 'A', 'pricing_mode' => 'custom-quote', 'description' => str_repeat('d', 201)], 'description'],
 ]);
+
+it('accepts a service title of exactly 80 characters and a description of exactly 200', function () {
+    [$user, $profile] = pageFreelancer();
+
+    Livewire::actingAs($user)
+        ->test('pages::freelancer.services')
+        ->set('title', str_repeat('t', 80))
+        ->set('description', str_repeat('d', 200))
+        ->set('pricing_mode', 'custom-quote')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($profile->refresh()->openRevision->content()->services())->toHaveCount(1);
+});
 
 it('edits a service keeping its identity', function () {
     [$user, $profile] = pageFreelancer();
@@ -199,7 +220,7 @@ it('refuses to change services while the profile is under review', function () {
 
 it('limits how many services can be listed', function () {
     [$user, $profile] = pageFreelancer();
-    $items = array_map(fn (int $i): array => ['title' => "Service {$i}", 'pricing_mode' => 'custom-quote'], range(1, 20));
+    $items = array_map(fn (int $i): array => ['title' => "Service {$i}", 'pricing_mode' => 'custom-quote'], range(1, 3));
     $revision = $profile->openRevision()->first() ?? app(OpenProfileRevision::class)($profile);
     $revision->forceFill(['payload' => $revision->content()->with(['services' => $items])->toArray()])->save();
 
@@ -210,7 +231,16 @@ it('limits how many services can be listed', function () {
         ->call('save')
         ->assertHasErrors('title');
 
-    expect($revision->refresh()->content()->services())->toHaveCount(20);
+    expect($revision->refresh()->content()->services())->toHaveCount(3);
+});
+
+it('hides the add button once three services are listed', function () {
+    [$user, $profile] = pageFreelancer();
+    $items = array_map(fn (int $i): array => ['title' => "Service {$i}", 'pricing_mode' => 'custom-quote'], range(1, 3));
+    $revision = app(OpenProfileRevision::class)($profile);
+    $revision->forceFill(['payload' => $revision->content()->with(['services' => $items])->toArray()])->save();
+
+    Livewire::actingAs($user)->test('pages::freelancer.services')->assertDontSeeHtml('wire:click="startCreating"');
 });
 
 // Consultations ------------------------------------------------------------------------------
@@ -564,7 +594,7 @@ it('tells the freelancer what is missing when the profile cannot be submitted', 
     Livewire::actingAs($user)
         ->test('profile-revision-bar')
         ->call('submit')
-        ->assertHasErrors(['professional_title', 'about', 'location', 'category_ids', 'skill_ids'])
+        ->assertHasErrors(['professional_title', 'about', 'location', 'professional_function_id', 'role_ids', 'skill_ids', 'tool_ids'])
         ->assertSee('Your profile cannot be submitted yet');
 
     expect($profile->refresh()->openRevision->status)->toBe(ProfileStatus::Draft);
@@ -639,6 +669,44 @@ it('previews the pending content the way clients will see it', function () {
         ->assertSee('My highlight')
         ->assertSee('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ', false)
         ->assertSee('https://example.com', false);
+});
+
+it('previews the function, roles, catalog selections, rates and best-fit lines', function () {
+    [$user, $profile] = pageFreelancer();
+    $function = ProfessionalFunction::factory()->create(['name' => 'Paid Media']);
+    $main = ProfessionalRole::factory()->create(['name' => 'Paid Social Marketer']);
+    $secondary = ProfessionalRole::factory()->create(['name' => 'Growth Marketer']);
+    $skill = Skill::factory()->create(['name' => 'Meta Ads']);
+    $tool = Tool::factory()->create(['name' => 'Triple Whale']);
+    $industry = Industry::factory()->create(['name' => 'Pet Supplies']);
+    $revision = app(OpenProfileRevision::class)($profile);
+    $revision->forceFill(['payload' => $revision->content()->with([
+        'professional_function_id' => $function->id,
+        'role_ids' => [$main->id, $secondary->id],
+        'skill_ids' => [$skill->id],
+        'tool_ids' => [$tool->id],
+        'industry_ids' => [$industry->id],
+        'hourly_rate_cents' => 12550,
+        'offers_monthly_retainers' => true,
+        'monthly_retainers_description' => 'Weekly creative testing',
+        'monthly_retainers_from_cents' => 300000,
+        'weekly_hours' => '11-20',
+        'open_to_full_time' => true,
+        'best_fit' => ['Brands spending over $500K a month'],
+    ])->toArray()])->save();
+
+    $this->actingAs($user)->get(route('freelancer.preview'))
+        ->assertOk()
+        ->assertSeeInOrder(['Paid Media', 'Paid Social Marketer', 'Growth Marketer'])
+        ->assertSee('Meta Ads')
+        ->assertSee('Triple Whale')
+        ->assertSee('Pet Supplies')
+        ->assertSee('$125.50 / hour')
+        ->assertSee('Yes, from $3,000.00 / month')
+        ->assertSee('Weekly creative testing')
+        ->assertSee('11-20 hours per week')
+        ->assertSee('Open to full-time opportunities')
+        ->assertSee('Brands spending over $500K a month');
 });
 
 it('never renders unsafe links or unsupported videos in a profile', function () {

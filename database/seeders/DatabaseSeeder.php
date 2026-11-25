@@ -13,8 +13,11 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            CategorySeeder::class,
+            ProfessionalFunctionSeeder::class,
+            ProfessionalRoleSeeder::class,
             SkillSeeder::class,
+            ToolSeeder::class,
+            IndustrySeeder::class,
         ]);
 
         if (app()->environment('local')) {

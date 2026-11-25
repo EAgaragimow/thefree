@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\Skills\Pages;
 
 use App\Filament\Resources\Skills\SkillResource;
-use Filament\Actions\DeleteAction;
+use App\Filament\Support\CatalogDeletion;
 use Filament\Resources\Pages\EditRecord;
 
 class EditSkill extends EditRecord
@@ -13,7 +13,7 @@ class EditSkill extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            DeleteAction::make(),
+            CatalogDeletion::deleteAction(),
         ];
     }
 }

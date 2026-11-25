@@ -4,6 +4,7 @@ use App\Enums\ProfileStatus;
 use App\Enums\UserRole;
 use App\Models\AuditLog;
 use App\Models\FreelancerApplication;
+use App\Models\ProfessionalRole;
 use App\Models\Skill;
 use App\Models\User;
 use Livewire\Livewire;
@@ -41,6 +42,8 @@ it('shows an error for an expired invitation', function () {
 });
 
 it('creates a verified freelancer with a profile prepopulated from the application', function () {
+    Skill::factory()->create(['name' => 'Figma', 'slug' => 'figma']);
+    Skill::factory()->create(['name' => 'Branding', 'slug' => 'branding']);
     $application = approvedApplication($token);
 
     Livewire::test('pages::freelancer.activate', ['token' => $token])
@@ -74,16 +77,40 @@ it('creates a verified freelancer with a profile prepopulated from the applicati
     expect(AuditLog::where('action', 'application.activated')->exists())->toBeTrue();
 });
 
-it('reuses existing skills instead of duplicating them', function () {
-    Skill::factory()->create(['name' => 'Figma', 'slug' => 'figma']);
-    approvedApplication($token);
+it('only carries over application skills that exist in the skill catalog', function () {
+    $figma = Skill::factory()->create(['name' => 'Figma', 'slug' => 'figma']);
+    approvedApplication($token, ['skills' => ['figma', 'Underwater Basket Weaving']]);
 
     Livewire::test('pages::freelancer.activate', ['token' => $token])
         ->set('password', 'a-Strong-passw0rd!')
         ->set('password_confirmation', 'a-Strong-passw0rd!')
         ->call('activate');
 
-    expect(Skill::where('slug', 'figma')->count())->toBe(1);
+    $draft = User::where('email', 'ada@example.com')->firstOrFail()->freelancerProfile->openRevision;
+
+    expect(Skill::count())->toBe(1)
+        ->and($draft->content()->skillIds())->toBe([$figma->id]);
+});
+
+it('carries the applicant\'s roles into the draft in pick order, ready to become main, secondary and third role', function () {
+    $producer = ProfessionalRole::factory()->create(['name' => 'Producer', 'slug' => 'producer']);
+    $copywriter = ProfessionalRole::factory()->create(['name' => 'Copywriter', 'slug' => 'copywriter']);
+    $growth = ProfessionalRole::factory()->create(['name' => 'Head of Growth', 'slug' => 'head-of-growth']);
+    approvedApplication($token, ['roles' => ['Producer', 'Head of Growth', 'Copywriter', 'Not A Role']]);
+
+    Livewire::test('pages::freelancer.activate', ['token' => $token])
+        ->set('password', 'a-Strong-passw0rd!')
+        ->set('password_confirmation', 'a-Strong-passw0rd!')
+        ->call('activate');
+
+    $content = User::where('email', 'ada@example.com')->firstOrFail()->freelancerProfile->openRevision->content();
+
+    expect($content->roleIds())->toBe([$producer->id, $growth->id, $copywriter->id])
+        ->and($content->roleAttributes())->toBe([
+            'main_role_id' => $producer->id,
+            'secondary_role_id' => $growth->id,
+            'third_role_id' => $copywriter->id,
+        ]);
 });
 
 it('cannot be used twice', function () {

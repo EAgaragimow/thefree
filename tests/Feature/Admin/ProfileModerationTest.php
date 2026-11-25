@@ -10,7 +10,12 @@ use App\Models\AuditLog;
 use App\Models\ConsultationOffer;
 use App\Models\FreelancerProfile;
 use App\Models\FreelancerProfileRevision;
+use App\Models\Industry;
+use App\Models\ProfessionalFunction;
+use App\Models\ProfessionalRole;
 use App\Models\Service;
+use App\Models\Skill;
+use App\Models\Tool;
 use App\Models\User;
 use App\Notifications\ProfileChangesRequested;
 use App\Notifications\ProfilePublished;
@@ -148,6 +153,47 @@ it('shows the moderator every offer the freelancer wants to publish', function (
         ->assertSee('Services')
         ->assertSee('Consultations')
         ->assertSee('Highlights');
+});
+
+it('shows the moderator the function, roles, catalog selections, rates and best-fit lines', function () {
+    $profile = FreelancerProfile::factory()->published()->create();
+    $function = ProfessionalFunction::factory()->create(['name' => 'Retention & CRM']);
+    $main = ProfessionalRole::factory()->create(['name' => 'CRM Marketer']);
+    $secondary = ProfessionalRole::factory()->create(['name' => 'Head of Retention']);
+    $skill = Skill::factory()->create(['name' => 'Email Marketing']);
+    $tool = Tool::factory()->create(['name' => 'Klaviyo']);
+    $industry = Industry::factory()->create(['name' => 'Subscription Boxes']);
+    $revision = FreelancerProfileRevision::factory()->pendingReview()->create([
+        'freelancer_profile_id' => $profile->id,
+        'payload' => $profile->liveContent()->with([
+            'professional_function_id' => $function->id,
+            'role_ids' => [$main->id, $secondary->id],
+            'skill_ids' => [$skill->id],
+            'tool_ids' => [$tool->id],
+            'industry_ids' => [$industry->id],
+            'hourly_rate_cents' => 9500,
+            'offers_monthly_retainers' => true,
+            'monthly_retainers_description' => 'Lifecycle program management',
+            'monthly_retainers_from_cents' => 400000,
+            'weekly_hours' => '21-40',
+            'open_to_full_time' => false,
+            'best_fit' => ['Subscription brands'],
+        ])->toArray(),
+    ]);
+
+    Livewire::test(ViewProfileRevision::class, ['record' => $revision->getKey()])
+        ->assertSuccessful()
+        ->assertSee('Retention & CRM')
+        ->assertSee('main-role: CRM Marketer')
+        ->assertSee('secondary-role: Head of Retention')
+        ->assertSee('Email Marketing')
+        ->assertSee('Klaviyo')
+        ->assertSee('Subscription Boxes')
+        ->assertSee('$95.00')
+        ->assertSee('Yes, from $4,000.00 / month')
+        ->assertSee('Lifecycle program management')
+        ->assertSee('21-40')
+        ->assertSee('Subscription brands');
 });
 
 it('shows the live offers on a published profile', function () {

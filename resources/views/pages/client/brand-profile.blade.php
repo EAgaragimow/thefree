@@ -1,9 +1,10 @@
 <?php
 
 use App\Models\BrandProfile;
-use App\Models\Category;
-use App\Models\Skill;
+use App\Models\ProfessionalFunction;
+use App\Models\ProfessionalRole;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -34,10 +35,10 @@ new #[Title('Brand profile')] class extends Component {
     public string $contact_phone = '';
 
     /** @var list<int|string> */
-    public array $category_ids = [];
+    public array $function_ids = [];
 
     /** @var list<int|string> */
-    public array $skill_ids = [];
+    public array $role_ids = [];
 
     public $logo = null;
 
@@ -65,8 +66,8 @@ new #[Title('Brand profile')] class extends Component {
         $this->contact_email = (string) $profile->contact_email;
         $this->contact_phone = (string) $profile->contact_phone;
         $this->logo_path = $profile->logo_path;
-        $this->category_ids = $profile->categories->pluck('id')->map(fn ($id) => (string) $id)->all();
-        $this->skill_ids = $profile->skills->pluck('id')->map(fn ($id) => (string) $id)->all();
+        $this->function_ids = $profile->professionalFunctions->pluck('id')->map(fn ($id) => (string) $id)->all();
+        $this->role_ids = $profile->professionalRoles->pluck('id')->map(fn ($id) => (string) $id)->all();
     }
 
     public function save(): void
@@ -86,10 +87,15 @@ new #[Title('Brand profile')] class extends Component {
             'contact_email' => ['nullable', 'email', 'max:255'],
             'contact_phone' => ['nullable', 'string', 'max:50'],
             'logo' => ['nullable', 'image', 'max:2048'],
-            'category_ids' => ['array'],
-            'category_ids.*' => ['integer', 'exists:categories,id'],
-            'skill_ids' => ['array'],
-            'skill_ids.*' => ['integer', 'exists:skills,id'],
+            'function_ids' => ['array'],
+            'function_ids.*' => ['integer', 'exists:professional_functions,id'],
+            'role_ids' => ['array'],
+            'role_ids.*' => [
+                'integer',
+                Rule::exists('professional_roles', 'id')->whereIn('professional_function_id', array_map('intval', $this->function_ids)),
+            ],
+        ], [
+            'role_ids.*.exists' => 'Pick roles that belong to the functions you selected.',
         ]);
 
         $user = auth()->user();
@@ -122,8 +128,8 @@ new #[Title('Brand profile')] class extends Component {
         $profile->user()->associate($user);
         $profile->save();
 
-        $profile->categories()->sync($validated['category_ids']);
-        $profile->skills()->sync($validated['skill_ids']);
+        $profile->professionalFunctions()->sync($validated['function_ids']);
+        $profile->professionalRoles()->sync($validated['role_ids']);
 
         $this->logo = null;
         $this->logo_path = $profile->logo_path;
@@ -131,19 +137,34 @@ new #[Title('Brand profile')] class extends Component {
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, Category>
+     * @return list<array{id: string, name: string}>
      */
-    public function categories()
+    public function functionOptions(): array
     {
-        return Category::query()->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get();
+        return ProfessionalFunction::query()->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(['id', 'name'])
+            ->map(fn (ProfessionalFunction $function): array => ['id' => (string) $function->id, 'name' => $function->name])
+            ->all();
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, Skill>
+     * Drop roles whose function is no longer selected.
      */
-    public function skills()
+    public function updatedFunctionIds(): void
     {
-        return Skill::query()->orderBy('name')->get();
+        $this->role_ids = array_values(array_filter(
+            $this->role_ids,
+            fn ($roleId): bool => in_array((string) $roleId, array_column($this->roleOptions(), 'id'), true),
+        ));
+    }
+
+    /**
+     * Roles of the selected functions only, listed under their function.
+     *
+     * @return list<array{id: string, name: string, group: string}>
+     */
+    public function roleOptions(): array
+    {
+        return ProfessionalRole::selectOptions($this->function_ids);
     }
 };
 ?>
@@ -251,19 +272,19 @@ new #[Title('Brand profile')] class extends Component {
             <flux:heading size="lg">Interests</flux:heading>
             <flux:text>We use these to recommend freelancers that fit your needs.</flux:text>
 
-            <flux:checkbox.group wire:model="category_ids" label="Categories">
-                @foreach ($this->categories() as $category)
-                    <flux:checkbox wire:key="category-{{ $category->id }}" value="{{ $category->id }}" label="{{ $category->name }}" />
-                @endforeach
-            </flux:checkbox.group>
-            <flux:error name="category_ids" />
+            <x-multi-select wire:model.live="function_ids" label="Functions" :options="$this->functionOptions()" />
 
-            <flux:checkbox.group wire:model="skill_ids" label="Skills">
-                @foreach ($this->skills() as $skill)
-                    <flux:checkbox wire:key="skill-{{ $skill->id }}" value="{{ $skill->id }}" label="{{ $skill->name }}" />
-                @endforeach
-            </flux:checkbox.group>
-            <flux:error name="skill_ids" />
+            @if ($function_ids === [])
+                <flux:text size="sm">Select at least one function to choose roles.</flux:text>
+            @else
+                <x-multi-select
+                    wire:key="brand-roles-{{ implode('-', $function_ids) }}"
+                    wire:model="role_ids"
+                    label="Roles"
+                    description="Roles within the functions you selected."
+                    :options="$this->roleOptions()"
+                />
+            @endif
         </section>
 
         <flux:button type="submit" variant="primary">

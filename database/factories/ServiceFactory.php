@@ -22,7 +22,7 @@ class ServiceFactory extends Factory
         return [
             'freelancer_profile_id' => FreelancerProfile::factory(),
             'title' => fake()->sentence(3),
-            'description' => fake()->paragraph(),
+            'description' => fake()->text(150),
             'pricing_mode' => PricingMode::Fixed,
             'price_cents' => fake()->numberBetween(50, 500) * 100,
             'sort_order' => 0,

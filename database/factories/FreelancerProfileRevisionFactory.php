@@ -4,10 +4,13 @@ namespace Database\Factories;
 
 use App\Actions\Profiles\ProfileContent;
 use App\Enums\ProfileStatus;
-use App\Models\Category;
+use App\Enums\WeeklyHours;
 use App\Models\FreelancerProfile;
 use App\Models\FreelancerProfileRevision;
+use App\Models\ProfessionalFunction;
+use App\Models\ProfessionalRole;
 use App\Models\Skill;
+use App\Models\Tool;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -33,9 +36,27 @@ class FreelancerProfileRevisionFactory extends Factory
                 'timezone' => 'UTC',
                 'website' => fake()->url(),
                 'social_links' => ['linkedin' => fake()->url()],
-                'category_ids' => [Category::factory()->create()->id],
-                'skill_ids' => [Skill::factory()->create()->id],
+                ...self::completeDetails(),
             ])->toArray(),
+        ];
+    }
+
+    /**
+     * Catalog selections and answers that satisfy every requirement for submitting a profile.
+     *
+     * @return array<string, mixed>
+     */
+    public static function completeDetails(): array
+    {
+        return [
+            'professional_function_id' => ProfessionalFunction::factory()->create()->id,
+            'role_ids' => [ProfessionalRole::factory()->create()->id],
+            'skill_ids' => Skill::factory()->count(ProfileContent::MIN_SKILLS)->create()->modelKeys(),
+            'tool_ids' => Tool::factory()->count(ProfileContent::MIN_TOOLS)->create()->modelKeys(),
+            'hourly_rate_cents' => fake()->numberBetween(30, 200) * 100,
+            'offers_monthly_retainers' => false,
+            'weekly_hours' => WeeklyHours::From21To40->value,
+            'open_to_full_time' => false,
         ];
     }
 

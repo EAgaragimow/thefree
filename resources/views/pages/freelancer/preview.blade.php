@@ -1,8 +1,11 @@
 <?php
 
-use App\Models\Category;
 use App\Models\FreelancerProfile;
+use App\Models\Industry;
+use App\Models\ProfessionalFunction;
+use App\Models\ProfessionalRole;
 use App\Models\Skill;
+use App\Models\Tool;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -16,13 +19,22 @@ new #[Title('Preview')] class extends Component {
         return $profile->load('openRevision');
     }
 
+    public function functionName(?int $id): ?string
+    {
+        return $id === null ? null : ProfessionalFunction::query()->whereKey($id)->value('name');
+    }
+
     /**
+     * Role names in the order they were picked (main role first).
+     *
      * @param  list<int>  $ids
      * @return list<string>
      */
-    public function categoryNames(array $ids): array
+    public function roleNames(array $ids): array
     {
-        return Category::query()->whereIn('id', $ids)->orderBy('name')->pluck('name')->all();
+        $names = ProfessionalRole::query()->whereIn('id', $ids)->pluck('name', 'id');
+
+        return collect($ids)->map(fn (int $id): ?string => $names->get($id))->filter()->values()->all();
     }
 
     /**
@@ -32,6 +44,24 @@ new #[Title('Preview')] class extends Component {
     public function skillNames(array $ids): array
     {
         return Skill::query()->whereIn('id', $ids)->orderBy('name')->pluck('name')->all();
+    }
+
+    /**
+     * @param  list<int>  $ids
+     * @return list<string>
+     */
+    public function toolNames(array $ids): array
+    {
+        return Tool::query()->whereIn('id', $ids)->orderBy('name')->pluck('name')->all();
+    }
+
+    /**
+     * @param  list<int>  $ids
+     * @return list<string>
+     */
+    public function industryNames(array $ids): array
+    {
+        return Industry::query()->whereIn('id', $ids)->orderBy('name')->pluck('name')->all();
     }
 };
 ?>
@@ -53,7 +83,10 @@ new #[Title('Preview')] class extends Component {
     <x-freelancer-profile
         :content="$content"
         :user="auth()->user()"
-        :categories="$this->categoryNames($content->categoryIds())"
+        :professional-function="$this->functionName($content->professionalFunctionId())"
+        :roles="$this->roleNames($content->roleIds())"
         :skills="$this->skillNames($content->skillIds())"
+        :tools="$this->toolNames($content->toolIds())"
+        :industries="$this->industryNames($content->industryIds())"
     />
 </div>

@@ -57,13 +57,7 @@ class SubmitProfileForReview
             $errors['location'] = 'A location is required before submitting.';
         }
 
-        if ($content->categoryIds() === []) {
-            $errors['category_ids'] = 'Select at least one category before submitting.';
-        }
-
-        if ($content->skillIds() === []) {
-            $errors['skill_ids'] = 'Select at least one skill before submitting.';
-        }
+        $errors = [...$errors, ...$content->detailProblems()];
 
         if (($problems = $content->offerProblems()) !== []) {
             $errors['content'] = implode(' ', $problems);

@@ -46,7 +46,8 @@ class FreelancerApplicationResource extends Resource
                 TextEntry::make('email'),
                 TextEntry::make('phone')->placeholder('—'),
                 TextEntry::make('location'),
-                TextEntry::make('specialty'),
+                TextEntry::make('roles')->badge()->placeholder('—'),
+                TextEntry::make('specialty')->label('Main role'),
                 TextEntry::make('years_experience')->placeholder('—'),
                 TextEntry::make('skills')->badge(),
                 TextEntry::make('about')->placeholder('—')->columnSpanFull(),
@@ -71,7 +72,7 @@ class FreelancerApplicationResource extends Resource
             ->columns([
                 TextColumn::make('full_name')->searchable()->sortable(),
                 TextColumn::make('email')->searchable(),
-                TextColumn::make('specialty')->searchable(),
+                TextColumn::make('specialty')->label('Main role')->searchable(),
                 TextColumn::make('status')->badge()->sortable(),
                 TextColumn::make('created_at')->label('Submitted')->dateTime()->sortable(),
             ])

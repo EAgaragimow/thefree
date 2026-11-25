@@ -61,7 +61,7 @@ A Client has a `subscription-type` of **`free-plan`** or **`paid-plan`**. Track 
 
 Additional access rules:
 
-- Free Client's directory preview shows **6–9 freelancers** best matching their saved categories, skills, and related preferences. Cards are not navigable; clicking a card shows a **Paid Plan upgrade modal** with a payment link/action.
+- Free Client's directory preview shows **6–9 freelancers** best matching their saved functions, skills, and related preferences. Cards are not navigable; clicking a card shows a **Paid Plan upgrade modal** with a payment link/action.
 - A Free Client's Dashboard shows available information and a prominent upgrade CTA. Paid Client has full access.
 - Free and payment-restricted Clients retain existing conversations and can view ongoing projects. They **cannot** finalize/approve completion or pay for projects until Paid access is restored.
 - Free and payment-restricted Clients may continue already confirmed consultations, including applicable automatic call charges, and may use existing-call cancellation/rescheduling subject to established rules. They cannot create new bookings.
@@ -75,11 +75,11 @@ Additional access rules:
 - Simple registration, email verification, and immediate access to the appropriate Free Dashboard.
 - Extended **private Brand profile**: company name/logo, description, industry, website, location, social links, contact person/contact details.
 - Brand profile is visible to freelancers involved in relevant interactions, not as a public company directory.
-- Capture interest/preferences (categories, skills, etc.) used for personalized directory recommendations.
+- Capture interest/preferences used for personalized directory recommendations: the **functions** the brand needs and, within those functions, the **roles** (the role list shows only roles of the selected functions; deselecting a function drops its roles).
 
 ### Freelancer application and profile approval
 
-1. Freelancer submits an **extended application** with identity/contact details, specialty, skills, experience, portfolio, links/social information, and other relevant professional details.
+1. Freelancer submits an **extended application** with identity/contact details, location, roles (1–3, picked from the role list grouped by function; the order picked matters), skills (picked from the skill list), experience, portfolio, links/social information, and other relevant professional details.
 2. Admin reviews and **approves or rejects** the application.
 3. Approved applicant receives an invitation to activate their account.
 4. Application data **prepopulates a draft freelancer profile**; avoid asking for the same information again.
@@ -93,9 +93,36 @@ Suggested profile review stages: `Draft → Pending Review → Published`, with 
 ### Freelancer profile
 
 - Basic details: name, photo, professional title, location/time zone.
-- About, specialties, categories, skills, experience and work history, website/social links.
+- About, function, roles, skills, tools, industry experience, rates and availability, experience and work history, website/social links.
 - Portfolio / Highlights, consultations, professional Services, and eligible published reviews/rating.
 - Freelancer controls editing; publication and relevant changes are subject to the agreed review process.
+
+### Profile details
+
+All of these are chosen from admin-managed lists (selects), except the numbers, yes/no answers and free text. They go through the same profile review as other profile content.
+
+| Field | Rule |
+| --- | --- |
+| **Function** | Required, exactly one. Replaces the former "Categories" and is a flat list (no parent/child). |
+| **Roles** | Required, 1–3, picked from a list grouped by function (the function name, then its roles). The order picked matters; the form says so. |
+| **Skills** | Required, 3–15. |
+| **Tools & platforms** | Required, 2–20. |
+| **Industry experience** | Optional, up to 10. |
+| **Hourly rate** | Required, USD. |
+| **Monthly retainers** | Required yes/no. If yes: a description of the scope and the price retainers start at (USD per month) are required; if no, both are discarded. |
+| **Hours per week** | Required: `1-10`, `11-20`, `21-40` or `41+`. This is general capacity and is unrelated to consultation availability (§4, Consultations). |
+| **Open to full-time** | Required yes/no. |
+| **Best fit** | Optional, up to three short lines (255 characters each) describing the brands or problems the freelancer suits best. |
+
+**Technical role fields.** `main-role`, `secondary-role` and `third-role` are derived from the Roles selection (first, second and third role picked). Freelancers cannot edit them; they are shown read-only under "Hidden Technical Fields" at the bottom of My Profile and to moderators.
+
+**Location in the application.** Country, State/Province and City are three dependent selects fed by the locations list (`resources/data/locations`). Choosing a country clears State/Province and City; choosing a State/Province clears City. A country without states leaves State/Province and City disabled and optional; a state without cities leaves City disabled and optional; otherwise State/Province and City are required.
+
+**Roles from the application.** The roles are carried into the draft profile in the order picked, so the profile's main, secondary and third role are filled the same way as for roles chosen in the profile editor, when the profile is approved.
+
+**Skills from the application.** The application form offers the same skill list (up to 15). The chosen skills are carried over to the draft profile.
+
+**Catalog administration.** Admins manage functions, roles (each belongs to a function), skills, tools and industries. Deleting an entry that freelancers still use shows a warning naming them (id, name); once confirmed it is removed from their profiles.
 
 ### Highlights / portfolio
 
@@ -115,7 +142,7 @@ Suggested profile review stages: `Draft → Pending Review → Published`, with 
 
 Free and Paid are configured independently (different length, days, and hours). Changes to consultations go through the same profile review as other profile content. Booking and scheduling rules are defined in §8; a Free consultation involves no payment authorization (§9).
 
-**Services:** Freelancer creates descriptive service offers with one of these pricing modes:
+**Services:** Freelancer creates up to **3** descriptive service offers (name up to 80 characters, description up to 200 characters) with one of these pricing modes:
 
 - **Fixed Price**
 - **Starting From**
@@ -129,7 +156,7 @@ Free and Paid are configured independently (different length, days, and hours). 
 
 - Accessible only to authenticated users and subject to subscription-level restrictions.
 - Search by name, profession, skills, and keywords.
-- Filters/sorting for categories, specializations, skills, price, location, time zone, review/rating, and consultation availability.
+- Filters/sorting for function, roles, skills, tools, industries, hourly rate, hours per week, location, time zone, review/rating, and consultation availability.
 - **Favorites / Saved Freelancers** for eligible Clients.
 - **Featured Freelancers**, managed by Admin.
 - Ranking/recommendations may use the unified Freelancer score defined in §11, alongside search relevance.
@@ -335,7 +362,7 @@ Admin has broad operational and system permissions, including:
 - Manual review approval/rejection, investigation of private reports, disputes, and sanctions.
 - View/manage projects, proposals, consultations, cancellations, and exceptional situations.
 - Monitor Stripe-related payment/subscription states; perform **provider-supported** payment corrections/refunds.
-- Manage categories, specializations, featured freelancers, content/Blog, and relevant platform settings.
+- Manage the functions, roles, skills, tools and industries lists, featured freelancers, content/Blog, and relevant platform settings.
 - Manage rating-point adjustments and booking-request expiration policy (default: **1 hour**).
 - Maintain **Audit Logs** for sensitive Admin actions, including actor, action, subject, time, and reason.
 
@@ -361,7 +388,7 @@ Full System Control means broad authorized **application** administration, not b
 
 **Freelancer:** profile/review status, Highlights, Services, incoming requests/proposals, active projects, Call Requests, Calls (list/calendar), availability, connected calendars, messages, earnings/payment history, reviews/score, and private reports.
 
-**Admin:** users, applications, profile/review moderation, reports/disputes, projects, consultations, payment/subscription monitoring, categories, featured users, content, settings, audit logs.
+**Admin:** users, applications, profile/review moderation, reports/disputes, projects, consultations, payment/subscription monitoring, catalog lists (functions, roles, skills, tools, industries), featured users, content, settings, audit logs.
 
 ### UX standards
 

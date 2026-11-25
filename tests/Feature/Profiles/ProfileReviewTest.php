@@ -7,11 +7,14 @@ use App\Actions\Profiles\SaveFreelancerProfile;
 use App\Actions\Profiles\SubmitProfileForReview;
 use App\Enums\ProfileStatus;
 use App\Enums\ReviewDecision;
+use App\Enums\WeeklyHours;
 use App\Models\AuditLog;
-use App\Models\Category;
 use App\Models\FreelancerProfile;
 use App\Models\FreelancerProfileRevision;
+use App\Models\ProfessionalFunction;
+use App\Models\ProfessionalRole;
 use App\Models\Skill;
+use App\Models\Tool;
 use App\Models\User;
 use App\Notifications\ProfileChangesRequested;
 use App\Notifications\ProfilePublished;
@@ -31,16 +34,12 @@ function profileWithRevision(string $state = 'pendingReview'): FreelancerProfile
     return $profile->load('openRevision');
 }
 
-function saveProfile(FreelancerProfile $profile, array $attributes = [], ?array $categoryIds = null, ?array $skillIds = null): ?FreelancerProfileRevision
+function saveProfile(FreelancerProfile $profile, array $attributes = []): ?FreelancerProfileRevision
 {
-    $content = $profile->workingContent();
-
     return app(SaveFreelancerProfile::class)(
         $profile,
         $attributes,
-        $categoryIds ?? $content->categoryIds(),
-        $skillIds ?? $content->skillIds(),
-        $content->experiences(),
+        $profile->workingContent()->experiences(),
     );
 }
 
@@ -61,8 +60,16 @@ it('publishes the submitted revision to the live profile on approval', function 
         ->and($profile->content_updated_at->toDateTimeString())->toBe(now()->toDateTimeString())
         ->and($profile->professional_title)->toBe($revision->content()->get('professional_title'))
         ->and($profile->about)->toBe($revision->content()->get('about'))
-        ->and($profile->categories->pluck('id')->all())->toBe($revision->content()->categoryIds())
-        ->and($profile->skills->pluck('id')->all())->toBe($revision->content()->skillIds())
+        ->and($profile->professional_function_id)->toBe($revision->content()->professionalFunctionId())
+        ->and($profile->main_role_id)->toBe($revision->content()->roleIds()[0])
+        ->and($profile->secondary_role_id)->toBeNull()
+        ->and($profile->third_role_id)->toBeNull()
+        ->and($profile->skills->pluck('id')->all())->toEqualCanonicalizing($revision->content()->skillIds())
+        ->and($profile->tools->pluck('id')->all())->toEqualCanonicalizing($revision->content()->toolIds())
+        ->and($profile->hourly_rate_cents)->toBe($revision->content()->get('hourly_rate_cents'))
+        ->and($profile->offers_monthly_retainers)->toBeFalse()
+        ->and($profile->weekly_hours)->toBe(WeeklyHours::From21To40)
+        ->and($profile->open_to_full_time)->toBeFalse()
         ->and($profile->liveContent()->equals($revision->content()))->toBeTrue()
         ->and($profile->openRevision)->toBeNull()
         ->and($profile->displayStatus())->toBe(ProfileStatus::Published)
@@ -178,7 +185,10 @@ it('rejects submitting an incomplete revision and says what is missing', functio
         app(SubmitProfileForReview::class)($profile);
         $this->fail('Expected a validation exception.');
     } catch (ValidationException $exception) {
-        expect(array_keys($exception->errors()))->toEqualCanonicalizing(['professional_title', 'about', 'location', 'category_ids', 'skill_ids']);
+        expect(array_keys($exception->errors()))->toEqualCanonicalizing([
+            'professional_title', 'about', 'location', 'professional_function_id', 'role_ids', 'skill_ids', 'tool_ids',
+            'hourly_rate', 'offers_monthly_retainers', 'weekly_hours', 'open_to_full_time',
+        ]);
     }
 });
 
@@ -247,8 +257,8 @@ it('keeps the first publication date and moves the content update date on later 
 
     $this->travel(3)->days();
 
-    // Only categories and skills change, so no column of the profile row itself does.
-    $edit = saveProfile($profile, categoryIds: [Category::factory()->create()->id], skillIds: [Skill::factory()->create()->id]);
+    // Only skills and tools change, so no column of the profile row itself does.
+    $edit = saveProfile($profile, ['skill_ids' => Skill::factory()->count(3)->create()->modelKeys(), 'tool_ids' => Tool::factory()->count(2)->create()->modelKeys()]);
     app(SubmitProfileForReview::class)($profile);
     app(ApproveProfile::class)($edit->refresh(), $admin);
 
@@ -288,18 +298,47 @@ it('leaves admin-controlled fields untouched when a revision is approved', funct
         ->and($profile->featured_sort)->toBe(3);
 });
 
-it('ignores categories and skills that were deleted while the revision was open', function () {
+it('ignores catalog entries that were deleted while the revision was open', function () {
     Notification::fake();
     $profile = profileWithRevision();
     $revision = $profile->openRevision;
-    $keptCategory = Category::factory()->create();
-    $revision->forceFill(['payload' => $revision->content()->with(['category_ids' => [...$revision->content()->categoryIds(), $keptCategory->id]])->toArray()])->save();
+    $content = $revision->content();
+    $keptSkill = Skill::factory()->create();
+    $keptRole = ProfessionalRole::factory()->create();
+    $revision->forceFill(['payload' => $content->with([
+        'skill_ids' => [...$content->skillIds(), $keptSkill->id],
+        'role_ids' => [...$content->roleIds(), $keptRole->id],
+    ])->toArray()])->save();
 
-    Category::query()->whereKey($revision->content()->categoryIds()[0])->delete();
+    Skill::query()->whereIn('id', $content->skillIds())->delete();
+    ProfessionalFunction::query()->whereKey($content->professionalFunctionId())->delete();
+    ProfessionalRole::query()->whereKey($content->roleIds()[0])->delete();
 
     app(ApproveProfile::class)($revision->refresh(), User::factory()->admin()->create());
 
-    expect($profile->refresh()->categories->pluck('id')->all())->toBe([$keptCategory->id]);
+    $profile->refresh();
+
+    expect($profile->skills->pluck('id')->all())->toBe([$keptSkill->id])
+        ->and($profile->professional_function_id)->toBeNull()
+        ->and($profile->main_role_id)->toBe($keptRole->id)
+        ->and($profile->secondary_role_id)->toBeNull();
+});
+
+it('fills the main, secondary and third role in the order the roles were picked', function () {
+    Notification::fake();
+    $profile = profileWithRevision('draft');
+    [$first, $second, $third] = ProfessionalRole::factory()->count(3)->create();
+    saveProfile($profile, ['role_ids' => [$third->id, $first->id, $second->id]]);
+    app(SubmitProfileForReview::class)($profile);
+
+    app(ApproveProfile::class)($profile->refresh()->openRevision, User::factory()->admin()->create());
+
+    $profile->refresh();
+
+    expect($profile->main_role_id)->toBe($third->id)
+        ->and($profile->secondary_role_id)->toBe($first->id)
+        ->and($profile->third_role_id)->toBe($second->id)
+        ->and($profile->liveContent()->roleIds())->toBe([$third->id, $first->id, $second->id]);
 });
 
 it('keeps the live photo until a replacement has been approved', function () {

@@ -5,10 +5,10 @@ namespace App\Filament\Resources\Skills;
 use App\Filament\Resources\Skills\Pages\CreateSkill;
 use App\Filament\Resources\Skills\Pages\EditSkill;
 use App\Filament\Resources\Skills\Pages\ListSkills;
+use App\Filament\Support\CatalogDeletion;
 use App\Models\Skill;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
@@ -73,7 +73,7 @@ class SkillResource extends Resource
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    CatalogDeletion::deleteBulkAction(),
                 ]),
             ]);
     }

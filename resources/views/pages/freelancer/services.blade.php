@@ -90,8 +90,8 @@ new #[Title('Services')] class extends Component {
     public function save(UpdateProfileContent $update): void
     {
         $this->validate([
-            'title' => ['required', 'string', 'max:120'],
-            'description' => ['nullable', 'string', 'max:3000'],
+            'title' => ['required', 'string', 'max:'.ProfileContent::MAX_SERVICE_TITLE],
+            'description' => ['nullable', 'string', 'max:'.ProfileContent::MAX_SERVICE_DESCRIPTION],
             'pricing_mode' => ['required', Rule::enum(PricingMode::class)],
             'price' => [
                 Rule::requiredIf(fn (): bool => PricingMode::tryFrom($this->pricing_mode)?->requiresPrice() ?? false),
@@ -207,10 +207,10 @@ new #[Title('Services')] class extends Component {
     <div class="flex items-start justify-between gap-4">
         <div>
             <flux:heading size="xl" level="1">Services</flux:heading>
-            <flux:text class="mt-1">Describe the work you offer. Clients never buy a service directly: they send you a request, and you agree on scope, price and deadline together.</flux:text>
+            <flux:text class="mt-1">Describe the work you offer, up to {{ ProfileContent::MAX_SERVICES }} services. Clients never buy a service directly: they send you a request, and you agree on scope, price and deadline together.</flux:text>
         </div>
 
-        @unless ($this->isLocked())
+        @unless ($this->isLocked() || count($this->services()) >= ProfileContent::MAX_SERVICES)
             <flux:button variant="primary" icon="plus" wire:click="startCreating">Add service</flux:button>
         @endunless
     </div>
@@ -262,13 +262,14 @@ new #[Title('Services')] class extends Component {
 
             <flux:field>
                 <flux:label>Title</flux:label>
-                <flux:input wire:model="title" placeholder="Brand identity design" />
+                <flux:input wire:model="title" maxlength="{{ ProfileContent::MAX_SERVICE_TITLE }}" placeholder="Brand identity design" />
                 <flux:error name="title" />
             </flux:field>
 
             <flux:field>
                 <flux:label>Description</flux:label>
-                <flux:textarea wire:model="description" rows="5" placeholder="What is included, how you work, what you need from the client." />
+                <flux:description>Up to {{ ProfileContent::MAX_SERVICE_DESCRIPTION }} characters.</flux:description>
+                <flux:textarea wire:model="description" rows="4" maxlength="{{ ProfileContent::MAX_SERVICE_DESCRIPTION }}" placeholder="What is included, how you work, what you need from the client." />
                 <flux:error name="description" />
             </flux:field>
 

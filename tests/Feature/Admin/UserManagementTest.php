@@ -3,6 +3,8 @@
 use App\Enums\UserStatus;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Models\AuditLog;
+use App\Models\BrandProfile;
+use App\Models\FreelancerProfile;
 use App\Models\User;
 use Filament\Actions\Testing\TestAction;
 
@@ -90,6 +92,23 @@ it('soft-deletes a user with an audited reason and can restore them', function (
     expect(User::find($user->id))->not->toBeNull();
     expect(AuditLog::where('action', 'user.restored')->exists())->toBeTrue();
 });
+
+it('deletes the freelancer or brand profile together with the account', function (string $role, string $profileModel, string $relation) {
+    $user = User::factory()->{$role}()->create();
+    $profileModel::factory()->for($user)->create();
+    $other = $profileModel::factory()->create();
+
+    Livewire::test(ListUsers::class)
+        ->callAction(TestAction::make('deleteAccount')->table($user), data: ['reason' => 'Fulfilling deletion request'])
+        ->assertNotified('Account deleted.');
+
+    expect($profileModel::where('user_id', $user->id)->exists())->toBeFalse()
+        ->and($profileModel::whereKey($other->id)->exists())->toBeTrue()
+        ->and(AuditLog::where('action', 'user.deleted')->firstOrFail()->metadata['removed_profiles'])->toBe([$relation]);
+})->with([
+    'freelancer' => ['freelancer', FreelancerProfile::class, 'freelancer'],
+    'brand' => ['client', BrandProfile::class, 'brand'],
+]);
 
 it('keeps non-admins out of user management', function (string $role) {
     $this->actingAs(User::factory()->{$role}()->create());
