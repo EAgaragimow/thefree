@@ -1,5 +1,8 @@
 <?php
 
+use App\Actions\Audit\RecordAuditLog;
+use App\Enums\BillingState;
+use App\Enums\SubscriptionType;
 use App\Models\BrandProfile;
 use App\Models\Industry;
 use App\Models\ProfessionalFunction;
@@ -47,8 +50,14 @@ new #[Title('Brand profile')] class extends Component {
 
     public bool $saved = false;
 
+    public string $plan_type = '';
+
+    public bool $planChanged = false;
+
     public function mount(): void
     {
+        $this->plan_type = auth()->user()->subscription_type->value;
+
         $profile = auth()->user()->brandProfile;
 
         if (! $profile) {
@@ -71,9 +80,40 @@ new #[Title('Brand profile')] class extends Component {
         $this->role_ids = $profile->professionalRoles->pluck('id')->map(fn ($id) => (string) $id)->all();
     }
 
+    /**
+     * Testing aid until Stripe billing exists: the plan can be switched here without paying.
+     * It is only offered, and only honoured, in the local environment.
+     */
+    public function planSwitchAvailable(): bool
+    {
+        return app()->environment('local');
+    }
+
+    public function updatedPlanType(): void
+    {
+        abort_unless($this->planSwitchAvailable(), 403);
+
+        $this->validateOnly('plan_type', ['plan_type' => ['required', Rule::enum(SubscriptionType::class)]]);
+
+        $user = auth()->user();
+        $previous = $user->subscription_type;
+        $type = SubscriptionType::from($this->plan_type);
+
+        $user->forceFill(['subscription_type' => $type, 'billing_state' => BillingState::Ok])->save();
+
+        app(RecordAuditLog::class)('user.plan_switched', $user, metadata: [
+            'from' => $previous->value,
+            'to' => $type->value,
+            'source' => 'brand profile plan switch (local environment only)',
+        ]);
+
+        $this->planChanged = true;
+    }
+
     public function save(): void
     {
         $this->saved = false;
+        $this->planChanged = false;
 
         $validated = $this->validate([
             'company_name' => ['required', 'string', 'max:255'],
@@ -187,6 +227,22 @@ new #[Title('Brand profile')] class extends Component {
     <form wire:submit="save" class="mt-8 space-y-8">
         @if ($saved)
             <flux:callout variant="success" icon="check-circle" heading="Your brand profile has been saved." />
+        @endif
+
+        @if ($this->planSwitchAvailable())
+            <section class="space-y-4">
+                <flux:heading size="lg">Plan</flux:heading>
+
+                <flux:radio.group wire:model.live="plan_type" label="Plan Type" description="Local testing only: switches your plan right away, without payment.">
+                    <flux:radio value="paid-plan" label="Paid" />
+                    <flux:radio value="free-plan" label="Free" />
+                </flux:radio.group>
+                <flux:error name="plan_type" />
+
+                @if ($planChanged)
+                    <flux:callout variant="success" icon="check-circle" heading="Your plan is now {{ $plan_type === 'paid-plan' ? 'Paid' : 'Free' }}." />
+                @endif
+            </section>
         @endif
 
         <section class="space-y-4">

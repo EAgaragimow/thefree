@@ -1,5 +1,8 @@
 <?php
 
+use App\Enums\BillingState;
+use App\Enums\SubscriptionType;
+use App\Models\AuditLog;
 use App\Models\BrandProfile;
 use App\Models\Industry;
 use App\Models\ProfessionalFunction;
@@ -161,3 +164,49 @@ it('only accepts an industry from the catalog', function () {
 
     expect(BrandProfile::count())->toBe(0);
 });
+
+it('lets a brand switch its plan type in the local environment', function () {
+    $user = User::factory()->client()->paymentRestricted()->create();
+    app()->detectEnvironment(fn () => 'local');
+
+    $component = Livewire::actingAs($user)
+        ->test('pages::client.brand-profile')
+        ->assertSee('Plan Type')
+        ->assertSet('plan_type', 'paid-plan')
+        ->set('plan_type', 'free-plan')
+        ->assertSee('Your plan is now Free.');
+
+    expect($user->refresh()->subscription_type)->toBe(SubscriptionType::FreePlan)
+        ->and($user->billing_state)->toBe(BillingState::Ok);
+
+    $component->set('plan_type', 'paid-plan');
+
+    expect($user->refresh()->subscription_type)->toBe(SubscriptionType::PaidPlan)
+        ->and($user->hasPaidAccess())->toBeTrue()
+        ->and(AuditLog::where('action', 'user.plan_switched')->count())->toBe(2);
+});
+
+it('rejects an unknown plan type', function () {
+    $user = User::factory()->client()->create();
+    app()->detectEnvironment(fn () => 'local');
+
+    Livewire::actingAs($user)
+        ->test('pages::client.brand-profile')
+        ->set('plan_type', 'enterprise')
+        ->assertHasErrors('plan_type');
+
+    expect($user->refresh()->subscription_type)->toBe(SubscriptionType::FreePlan);
+});
+
+it('neither offers nor honours the plan switch outside the local environment', function (string $environment) {
+    $user = User::factory()->client()->create();
+    app()->detectEnvironment(fn () => $environment);
+
+    Livewire::actingAs($user)
+        ->test('pages::client.brand-profile')
+        ->assertDontSee('Plan Type')
+        ->set('plan_type', 'paid-plan')
+        ->assertForbidden();
+
+    expect($user->refresh()->subscription_type)->toBe(SubscriptionType::FreePlan);
+})->with(['production', 'staging', 'testing']);
