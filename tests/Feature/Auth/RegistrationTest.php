@@ -3,8 +3,10 @@
 use App\Enums\BillingState;
 use App\Enums\SubscriptionType;
 use App\Enums\UserRole;
+use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Support\Facades\Notification;
 
 function registrationPayload(array $overrides = []): array
@@ -53,12 +55,46 @@ it('rejects an email address that is already registered', function () {
     expect(User::where('email', 'jane@example.com')->count())->toBe(1);
 });
 
-it('rejects an invalid time zone', function () {
-    $this->post(route('register'), registrationPayload(['timezone' => 'Mars/Base']))
-        ->assertSessionHasErrors('timezone');
-});
+it('signs up with UTC when the browser reports an unknown or retired time zone name', function (string $reported) {
+    $this->post(route('register'), registrationPayload(['timezone' => $reported]))
+        ->assertSessionHasNoErrors();
+
+    expect(User::where('email', 'jane@example.com')->firstOrFail()->timezone)->toBe('UTC');
+})->with(['retired name' => 'Europe/Kiev', 'unknown' => 'Mars/Base']);
 
 it('rejects a password that does not match its confirmation', function () {
     $this->post(route('register'), registrationPayload(['password_confirmation' => 'different']))
         ->assertSessionHasErrors('password');
 });
+
+it('records the registration in the audit log', function () {
+    $this->post(route('register'), registrationPayload())->assertRedirect();
+
+    $user = User::where('email', 'jane@example.com')->firstOrFail();
+    $log = AuditLog::where('action', 'user.registered')->firstOrFail();
+
+    expect($log->actor_id)->toBe($user->id)
+        ->and($log->subject_id)->toBe($user->id)
+        ->and($log->metadata['role'])->toBe('client');
+});
+
+it('records a working verification link in the audit log only in the local environment', function (string $environment, bool $recorded) {
+    // CSRF checks are skipped only in the testing environment, which this test leaves.
+    $this->withoutMiddleware(PreventRequestForgery::class);
+    app()->detectEnvironment(fn () => $environment);
+
+    $this->post(route('register'), registrationPayload())->assertRedirect();
+
+    $link = AuditLog::where('action', 'user.registered')->firstOrFail()->metadata['activation_url'] ?? null;
+
+    expect($link !== null)->toBe($recorded);
+
+    if ($recorded) {
+        $this->get($link)->assertRedirect();
+
+        expect(User::where('email', 'jane@example.com')->firstOrFail()->hasVerifiedEmail())->toBeTrue();
+    }
+})->with([
+    'local' => ['local', true],
+    'production' => ['production', false],
+]);
