@@ -11,6 +11,7 @@ use App\Filament\Resources\Tools\Pages\CreateTool;
 use App\Filament\Resources\Tools\Pages\EditTool;
 use App\Filament\Resources\Tools\Pages\ListTools;
 use App\Filament\Support\CatalogDeletion;
+use App\Models\BrandProfile;
 use App\Models\FreelancerProfile;
 use App\Models\Industry;
 use App\Models\ProfessionalFunction;
@@ -112,6 +113,17 @@ it('warns who works in a function and that its roles lose their function', funct
         ->toContain('is used by 1 freelancer')
         ->toContain('#'.$profile->user_id.' '.e($profile->user->name))
         ->toContain('It has 2 role(s)');
+});
+
+it('warns how many brands have an industry and leaves them without one when it is deleted', function () {
+    $industry = Industry::factory()->create();
+    $brand = BrandProfile::factory()->create(['industry_id' => $industry->id]);
+
+    expect(deleteWarning(EditIndustry::class, $industry))->toContain('It is the industry of 1 brand(s)');
+
+    $industry->delete();
+
+    expect($brand->fresh()->industry_id)->toBeNull();
 });
 
 it('does not warn about an entry nobody uses', function () {

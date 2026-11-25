@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
     'company_name',
     'logo_path',
     'description',
-    'industry',
+    'industry_id',
     'website',
     'location',
     'social_links',
@@ -41,6 +41,11 @@ class BrandProfile extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function industry(): BelongsTo
+    {
+        return $this->belongsTo(Industry::class);
     }
 
     public function professionalFunctions(): BelongsToMany

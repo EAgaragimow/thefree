@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\BrandProfile;
+use App\Models\Industry;
 use App\Models\ProfessionalFunction;
 use App\Models\ProfessionalRole;
 use App\Models\User;
@@ -12,12 +13,13 @@ it('creates a private brand profile with interests', function () {
     $user = User::factory()->client()->create();
     $functions = ProfessionalFunction::factory()->count(2)->create();
     $role = ProfessionalRole::factory()->for($functions[0], 'professionalFunction')->create();
+    $industry = Industry::factory()->create(['name' => 'Manufacturing']);
 
     Livewire::actingAs($user)
         ->test('pages::client.brand-profile')
         ->set('company_name', 'Acme Inc.')
         ->set('description', 'We make everything.')
-        ->set('industry', 'Manufacturing')
+        ->set('industry_id', (string) $industry->id)
         ->set('website', 'https://acme.test')
         ->set('linkedin', 'https://linkedin.com/company/acme')
         ->set('contact_email', 'hello@acme.test')
@@ -30,6 +32,7 @@ it('creates a private brand profile with interests', function () {
     $profile = $user->fresh()->brandProfile;
 
     expect($profile->company_name)->toBe('Acme Inc.')
+        ->and($profile->industry_id)->toBe($industry->id)
         ->and($profile->social_links)->toBe(['linkedin' => 'https://linkedin.com/company/acme'])
         ->and($profile->professionalFunctions->pluck('id')->all())->toEqualCanonicalizing($functions->pluck('id')->all())
         ->and($profile->professionalRoles->pluck('id')->all())->toBe([$role->id]);
@@ -144,4 +147,17 @@ it('only ever shows a client their own brand profile', function () {
     Livewire::actingAs($user)
         ->test('pages::client.brand-profile')
         ->assertSet('company_name', '');
+});
+
+it('only accepts an industry from the catalog', function () {
+    $user = User::factory()->client()->create();
+
+    Livewire::actingAs($user)
+        ->test('pages::client.brand-profile')
+        ->set('company_name', 'Acme Inc.')
+        ->set('industry_id', '9999')
+        ->call('save')
+        ->assertHasErrors('industry_id');
+
+    expect(BrandProfile::count())->toBe(0);
 });

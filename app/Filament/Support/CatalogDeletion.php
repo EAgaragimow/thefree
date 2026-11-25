@@ -3,6 +3,7 @@
 namespace App\Filament\Support;
 
 use App\Models\FreelancerProfile;
+use App\Models\Industry;
 use App\Models\ProfessionalFunction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -50,6 +51,10 @@ class CatalogDeletion
 
             if ($record instanceof ProfessionalFunction && ($roles = $record->roles()->count()) > 0) {
                 $notes[] = '<p>'.e("It has {$roles} role(s). They stay in the catalog but no longer belong to any function.").'</p>';
+            }
+
+            if ($record instanceof Industry && ($brands = $record->brandProfiles()->count()) > 0) {
+                $notes[] = '<p>'.e("It is the industry of {$brands} brand(s). They will be left without an industry.").'</p>';
             }
 
             if ($total === 0 && $notes === []) {

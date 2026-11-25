@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\BrandProfile;
+use App\Models\Industry;
 use App\Models\ProfessionalFunction;
 use App\Models\ProfessionalRole;
 use Illuminate\Support\Facades\Storage;
@@ -16,7 +17,7 @@ new #[Title('Brand profile')] class extends Component {
 
     public string $description = '';
 
-    public string $industry = '';
+    public string $industry_id = '';
 
     public string $website = '';
 
@@ -56,7 +57,7 @@ new #[Title('Brand profile')] class extends Component {
 
         $this->company_name = $profile->company_name;
         $this->description = (string) $profile->description;
-        $this->industry = (string) $profile->industry;
+        $this->industry_id = (string) $profile->industry_id;
         $this->website = (string) $profile->website;
         $this->location = (string) $profile->location;
         $this->linkedin = (string) ($profile->social_links['linkedin'] ?? '');
@@ -77,7 +78,7 @@ new #[Title('Brand profile')] class extends Component {
         $validated = $this->validate([
             'company_name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:5000'],
-            'industry' => ['nullable', 'string', 'max:255'],
+            'industry_id' => ['nullable', 'integer', 'exists:industries,id'],
             'website' => ['nullable', 'url', 'max:255'],
             'location' => ['nullable', 'string', 'max:255'],
             'linkedin' => ['nullable', 'url', 'max:255'],
@@ -104,7 +105,7 @@ new #[Title('Brand profile')] class extends Component {
         $profile->fill([
             'company_name' => $validated['company_name'],
             'description' => $validated['description'] ?: null,
-            'industry' => $validated['industry'] ?: null,
+            'industry_id' => $validated['industry_id'] ?: null,
             'website' => $validated['website'] ?: null,
             'location' => $validated['location'] ?: null,
             'social_links' => array_filter([
@@ -134,6 +135,16 @@ new #[Title('Brand profile')] class extends Component {
         $this->logo = null;
         $this->logo_path = $profile->logo_path;
         $this->saved = true;
+    }
+
+    /**
+     * @return list<array{id: string, name: string}>
+     */
+    public function industryOptions(): array
+    {
+        return Industry::query()->orderBy('name')->get(['id', 'name'])
+            ->map(fn (Industry $industry): array => ['id' => (string) $industry->id, 'name' => $industry->name])
+            ->all();
     }
 
     /**
@@ -190,7 +201,7 @@ new #[Title('Brand profile')] class extends Component {
             </div>
 
             <flux:field>
-                <flux:label>Company name</flux:label>
+                <flux:label>Company name *</flux:label>
                 <flux:input wire:model="company_name" required />
                 <flux:error name="company_name" />
             </flux:field>
@@ -203,45 +214,17 @@ new #[Title('Brand profile')] class extends Component {
 
             <div class="grid gap-4 sm:grid-cols-2">
                 <flux:field>
-                    <flux:label>Industry</flux:label>
-                    <flux:input wire:model="industry" />
-                    <flux:error name="industry" />
-                </flux:field>
-
-                <flux:field>
                     <flux:label>Location</flux:label>
                     <flux:input wire:model="location" />
                     <flux:error name="location" />
                 </flux:field>
+
+                <flux:field>
+                    <flux:label>Website</flux:label>
+                    <flux:input type="url" wire:model="website" placeholder="https://" />
+                    <flux:error name="website" />
+                </flux:field>
             </div>
-
-            <flux:field>
-                <flux:label>Website</flux:label>
-                <flux:input type="url" wire:model="website" placeholder="https://" />
-                <flux:error name="website" />
-            </flux:field>
-        </section>
-
-        <section class="space-y-4">
-            <flux:heading size="lg">Social links</flux:heading>
-
-            <flux:field>
-                <flux:label>LinkedIn</flux:label>
-                <flux:input type="url" wire:model="linkedin" placeholder="https://" />
-                <flux:error name="linkedin" />
-            </flux:field>
-
-            <flux:field>
-                <flux:label>X / Twitter</flux:label>
-                <flux:input type="url" wire:model="twitter" placeholder="https://" />
-                <flux:error name="twitter" />
-            </flux:field>
-
-            <flux:field>
-                <flux:label>Instagram</flux:label>
-                <flux:input type="url" wire:model="instagram" placeholder="https://" />
-                <flux:error name="instagram" />
-            </flux:field>
         </section>
 
         <section class="space-y-4">
@@ -272,6 +255,16 @@ new #[Title('Brand profile')] class extends Component {
             <flux:heading size="lg">Interests</flux:heading>
             <flux:text>We use these to recommend freelancers that fit your needs.</flux:text>
 
+            <flux:field>
+                <flux:label>Industry</flux:label>
+                <flux:select wire:model="industry_id" placeholder="Select your industry">
+                    @foreach ($this->industryOptions() as $industry)
+                        <flux:select.option wire:key="industry-{{ $industry['id'] }}" value="{{ $industry['id'] }}">{{ $industry['name'] }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+                <flux:error name="industry_id" />
+            </flux:field>
+
             <x-multi-select wire:model.live="function_ids" label="Functions" :options="$this->functionOptions()" />
 
             @if ($function_ids === [])
@@ -285,6 +278,28 @@ new #[Title('Brand profile')] class extends Component {
                     :options="$this->roleOptions()"
                 />
             @endif
+        </section>
+
+        <section class="space-y-4">
+            <flux:heading size="lg">Social links</flux:heading>
+
+            <flux:field>
+                <flux:label>LinkedIn</flux:label>
+                <flux:input type="url" wire:model="linkedin" placeholder="https://" />
+                <flux:error name="linkedin" />
+            </flux:field>
+
+            <flux:field>
+                <flux:label>X / Twitter</flux:label>
+                <flux:input type="url" wire:model="twitter" placeholder="https://" />
+                <flux:error name="twitter" />
+            </flux:field>
+
+            <flux:field>
+                <flux:label>Instagram</flux:label>
+                <flux:input type="url" wire:model="instagram" placeholder="https://" />
+                <flux:error name="instagram" />
+            </flux:field>
         </section>
 
         <flux:button type="submit" variant="primary">

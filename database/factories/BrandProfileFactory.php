@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\BrandProfile;
+use App\Models\Industry;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -22,7 +23,7 @@ class BrandProfileFactory extends Factory
             'user_id' => User::factory()->client(),
             'company_name' => fake()->company(),
             'description' => fake()->paragraph(),
-            'industry' => fake()->word(),
+            'industry_id' => Industry::factory(),
             'website' => fake()->url(),
             'location' => fake()->city().', '.fake()->country(),
             'social_links' => ['linkedin' => fake()->url()],
