@@ -174,3 +174,14 @@ it('blocks signed-in users from the activation page', function () {
         ->get(route('freelancer.activate', $token))
         ->assertRedirect();
 });
+
+it('marks a freshly activated freelancer as a newbie', function () {
+    approvedApplication($token);
+
+    Livewire::test('pages::freelancer.activate', ['token' => $token])
+        ->set('password', 'a-Strong-passw0rd!')
+        ->set('password_confirmation', 'a-Strong-passw0rd!')
+        ->call('activate');
+
+    expect(User::where('email', 'ada@example.com')->firstOrFail()->freelancerProfile->is_newbie)->toBeTrue();
+});

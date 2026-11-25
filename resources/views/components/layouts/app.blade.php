@@ -24,13 +24,16 @@
             <flux:sidebar.nav>
                 @if ($user->isClient())
                     <flux:sidebar.item icon="home" href="{{ route('client.dashboard') }}" :current="request()->routeIs('client.dashboard')">Dashboard</flux:sidebar.item>
+                    <flux:sidebar.item icon="users" href="{{ route('directory.index') }}" :current="request()->routeIs('directory.*')">Freelancers</flux:sidebar.item>
                     <flux:sidebar.item icon="building-office" href="{{ route('client.brand-profile') }}" :current="request()->routeIs('client.brand-profile')">Brand profile</flux:sidebar.item>
                 @elseif ($user->isFreelancer())
                     <flux:sidebar.item icon="home" href="{{ route('freelancer.dashboard') }}" :current="request()->routeIs('freelancer.dashboard')">Dashboard</flux:sidebar.item>
-                    <flux:sidebar.item icon="user-circle" href="{{ route('freelancer.profile') }}" :current="request()->routeIs('freelancer.profile')">My profile</flux:sidebar.item>
-                    <flux:sidebar.item icon="photo" href="{{ route('freelancer.highlights') }}" :current="request()->routeIs('freelancer.highlights')">Highlights</flux:sidebar.item>
-                    <flux:sidebar.item icon="briefcase" href="{{ route('freelancer.services') }}" :current="request()->routeIs('freelancer.services')">Services</flux:sidebar.item>
-                    <flux:sidebar.item icon="video-camera" href="{{ route('freelancer.consultations') }}" :current="request()->routeIs('freelancer.consultations')">Consultations</flux:sidebar.item>
+                    <flux:sidebar.group expandable icon="user-circle" heading="Profile settings" :expanded="request()->routeIs('freelancer.profile', 'freelancer.highlights', 'freelancer.services', 'freelancer.consultations')">
+                        <flux:sidebar.item href="{{ route('freelancer.profile') }}" :current="request()->routeIs('freelancer.profile')">My profile</flux:sidebar.item>
+                        <flux:sidebar.item href="{{ route('freelancer.highlights') }}" :current="request()->routeIs('freelancer.highlights')">Highlights</flux:sidebar.item>
+                        <flux:sidebar.item href="{{ route('freelancer.services') }}" :current="request()->routeIs('freelancer.services')">Services</flux:sidebar.item>
+                        <flux:sidebar.item href="{{ route('freelancer.consultations') }}" :current="request()->routeIs('freelancer.consultations')">Consultations</flux:sidebar.item>
+                    </flux:sidebar.group>
                     <flux:sidebar.item icon="eye" href="{{ route('freelancer.preview') }}" :current="request()->routeIs('freelancer.preview')">Preview</flux:sidebar.item>
                 @else
                     <flux:sidebar.item icon="shield-check" href="{{ url('/admin') }}">Admin panel</flux:sidebar.item>

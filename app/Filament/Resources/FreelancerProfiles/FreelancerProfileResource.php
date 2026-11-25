@@ -3,12 +3,18 @@
 namespace App\Filament\Resources\FreelancerProfiles;
 
 use App\Actions\Profiles\ProfileContent;
+use App\Actions\Profiles\SetProfileFeatured;
 use App\Filament\Resources\FreelancerProfiles\Pages\ListFreelancerProfiles;
 use App\Filament\Resources\FreelancerProfiles\Pages\ViewFreelancerProfile;
 use App\Filament\Resources\ProfileRevisions\ProfileRevisionResource;
+use App\Filament\Support\RunsAdminAction;
 use App\Models\FreelancerProfile;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -48,6 +54,9 @@ class FreelancerProfileResource extends Resource
                 TextEntry::make('published_at')->label('First published')->dateTime()->placeholder('Never published'),
                 TextEntry::make('content_updated_at')->label('Content updated')->dateTime()->placeholder('—'),
                 TextEntry::make('score'),
+                IconEntry::make('is_newbie')->label('Newbie')->boolean(),
+                TextEntry::make('featured_at')->label('Featured since')->dateTime()->placeholder('Not featured'),
+                TextEntry::make('featured_sort')->label('Featured position')->placeholder('—'),
                 TextEntry::make('professional_title')->placeholder('—'),
                 TextEntry::make('location')->placeholder('—'),
                 TextEntry::make('timezone'),
@@ -92,6 +101,10 @@ class FreelancerProfileResource extends Resource
                     ->boolean()
                     ->getStateUsing(fn (FreelancerProfile $record): bool => $record->isPublished()),
                 TextColumn::make('score')->sortable(),
+                IconColumn::make('is_newbie')->label('Newbie')->boolean()->toggleable(),
+                IconColumn::make('featured')
+                    ->boolean()
+                    ->getStateUsing(fn (FreelancerProfile $record): bool => $record->isFeatured()),
                 TextColumn::make('published_at')->label('First published')->dateTime()->sortable(),
                 TextColumn::make('content_updated_at')->label('Content updated')->dateTime()->sortable()->toggleable(),
             ])
@@ -101,10 +114,60 @@ class FreelancerProfileResource extends Resource
                         true: fn ($query) => $query->whereNotNull('published_at'),
                         false: fn ($query) => $query->whereNull('published_at'),
                     ),
+                TernaryFilter::make('featured')
+                    ->queries(
+                        true: fn ($query) => $query->whereNotNull('featured_at'),
+                        false: fn ($query) => $query->whereNull('featured_at'),
+                    ),
             ])
             ->recordActions([
                 ViewAction::make(),
+                self::featureAction(),
+                self::unfeatureAction(),
             ]);
+    }
+
+    /**
+     * Put a published profile into the directory's Featured block.
+     */
+    public static function featureAction(): Action
+    {
+        return Action::make('feature')
+            ->label('Feature')
+            ->color('warning')
+            ->icon(Heroicon::OutlinedStar)
+            ->requiresConfirmation()
+            ->modalDescription('Featured freelancers are shown first in the directory.')
+            ->schema([
+                TextInput::make('position')
+                    ->numeric()
+                    ->integer()
+                    ->minValue(0)
+                    ->helperText('Lower numbers come first. Leave empty to add the profile to the end.'),
+                Textarea::make('reason')->required()->maxLength(1000),
+            ])
+            ->visible(fn (FreelancerProfile $record): bool => $record->isPublished() && ! $record->isFeatured())
+            ->action(fn (FreelancerProfile $record, array $data) => RunsAdminAction::run(
+                fn () => app(SetProfileFeatured::class)($record, true, auth()->user(), $data['reason'], filled($data['position'] ?? null) ? (int) $data['position'] : null),
+                'Profile featured.',
+            ));
+    }
+
+    public static function unfeatureAction(): Action
+    {
+        return Action::make('unfeature')
+            ->label('Unfeature')
+            ->color('gray')
+            ->icon(Heroicon::OutlinedStar)
+            ->requiresConfirmation()
+            ->schema([
+                Textarea::make('reason')->required()->maxLength(1000),
+            ])
+            ->visible(fn (FreelancerProfile $record): bool => $record->isFeatured())
+            ->action(fn (FreelancerProfile $record, array $data) => RunsAdminAction::run(
+                fn () => app(SetProfileFeatured::class)($record, false, auth()->user(), $data['reason']),
+                'Profile is no longer featured.',
+            ));
     }
 
     public static function getPages(): array

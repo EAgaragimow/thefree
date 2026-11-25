@@ -55,6 +55,7 @@ class ActivateFreelancerAccount
             $user->save();
 
             $profile = new FreelancerProfile;
+            $profile->is_newbie = true;
             $profile->user()->associate($user);
             $profile->application()->associate($application);
             $profile->save();

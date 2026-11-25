@@ -44,7 +44,12 @@ new #[Title('Dashboard')] class extends Component {
         <flux:card class="space-y-3">
             <div class="flex items-center justify-between gap-4">
                 <flux:heading>Profile status</flux:heading>
-                <flux:badge color="{{ $this->statusColor($status) }}">{{ $this->statusLabel($status) }}</flux:badge>
+                <div class="flex items-center gap-2">
+                    <flux:badge color="{{ $this->statusColor($status) }}">{{ $this->statusLabel($status) }}</flux:badge>
+                    @if ($profile->is_newbie)
+                        <flux:badge color="sky">Newbie</flux:badge>
+                    @endif
+                </div>
             </div>
 
             @if ($status === ProfileStatus::ChangesRequested && $profile->openRevision?->last_change_request)
@@ -65,7 +70,10 @@ new #[Title('Dashboard')] class extends Component {
                 <flux:text>Your last approved version stays visible while your new changes are reviewed.</flux:text>
             @endif
 
-            <flux:button href="{{ route('freelancer.profile') }}" variant="primary">Open my profile</flux:button>
+            <div class="flex flex-wrap gap-2">
+                <flux:button href="{{ route('freelancer.preview') }}" variant="primary">Preview Profile</flux:button>
+                <flux:button href="{{ route('freelancer.profile') }}">Profile Settings</flux:button>
+            </div>
         </flux:card>
     @endif
 

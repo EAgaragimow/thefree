@@ -56,6 +56,14 @@ class FreelancerProfileFactory extends Factory
         return $this->has(FreelancerProfileRevision::factory()->changesRequested($comment), 'revisions');
     }
 
+    /**
+     * A profile in its first month, which gets a head start in the directory.
+     */
+    public function newbie(): static
+    {
+        return $this->state(fn (array $attributes) => ['is_newbie' => true]);
+    }
+
     public function featured(int $sort = 0): static
     {
         return $this->state(fn (array $attributes) => [

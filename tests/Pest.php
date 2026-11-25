@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\FreelancerProfile;
+use App\Models\User;
 use Database\Factories\FreelancerProfileRevisionFactory;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
@@ -71,4 +72,18 @@ function completeLiveProfile(FreelancerProfile $profile): FreelancerProfile
     $profile->tools()->sync($details['tool_ids']);
 
     return $profile;
+}
+
+/**
+ * A freelancer whose profile is live in the directory.
+ *
+ * @param  array<string, mixed>  $attributes  Columns of the live profile.
+ * @param  array<string, mixed>  $user  Attributes of the freelancer's account.
+ */
+function directoryProfile(array $attributes = [], array $user = []): FreelancerProfile
+{
+    return FreelancerProfile::factory()
+        ->published()
+        ->for(User::factory()->freelancer()->state($user), 'user')
+        ->create(['hourly_rate_cents' => 5000, ...$attributes]);
 }

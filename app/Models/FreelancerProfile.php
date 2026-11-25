@@ -54,7 +54,11 @@ class FreelancerProfile extends Model
     protected $attributes = [
         'timezone' => 'UTC',
         'score' => 0,
+        'is_newbie' => false,
     ];
+
+    /** How long a new profile counts as a newbie and gets a head start in the directory. */
+    public const NEWBIE_MONTHS = 1;
 
     /**
      * Get the attributes that should be cast.
@@ -75,6 +79,7 @@ class FreelancerProfile extends Model
             'content_updated_at' => 'datetime',
             'featured_at' => 'datetime',
             'score' => 'integer',
+            'is_newbie' => 'boolean',
         ];
     }
 
@@ -176,6 +181,21 @@ class FreelancerProfile extends Model
             ->whereHas('user', fn (Builder $users) => $users
                 ->where('status', 'active')
                 ->whereNull('deactivated_at'));
+    }
+
+    /**
+     * What a directory card needs, loaded up front so a list of cards costs a fixed number of queries.
+     *
+     * @param  Builder<FreelancerProfile>  $query
+     */
+    public function scopeForCard(Builder $query): void
+    {
+        $query->with(['user', 'professionalFunction', 'mainRole', 'skills' => fn ($skills) => $skills->orderBy('name')]);
+    }
+
+    public function isFeatured(): bool
+    {
+        return $this->featured_at !== null;
     }
 
     /**

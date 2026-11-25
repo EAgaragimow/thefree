@@ -13,6 +13,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -67,6 +68,16 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     public function freelancerProfile(): HasOne
     {
         return $this->hasOne(FreelancerProfile::class);
+    }
+
+    /**
+     * Freelancers this client has saved, most recently saved first.
+     */
+    public function favoriteFreelancers(): BelongsToMany
+    {
+        return $this->belongsToMany(FreelancerProfile::class, 'favorites')
+            ->withTimestamps()
+            ->orderByPivot('created_at', 'desc');
     }
 
     public function avatarUrl(): ?string

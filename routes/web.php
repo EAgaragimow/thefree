@@ -19,6 +19,11 @@ Route::middleware(['auth', 'active', 'verified'])->group(function () {
         Route::livewire('/account', 'pages::settings.account')->name('account');
     });
 
+    Route::prefix('freelancers')->name('directory.')->group(function () {
+        Route::livewire('/', 'pages::directory.index')->name('index');
+        Route::livewire('/{profile}', 'pages::directory.show')->whereNumber('profile')->name('show');
+    });
+
     Route::middleware('role:client')->prefix('client')->name('client.')->group(function () {
         Route::livewire('/dashboard', 'pages::client.dashboard')->name('dashboard');
         Route::livewire('/brand-profile', 'pages::client.brand-profile')->name('brand-profile');

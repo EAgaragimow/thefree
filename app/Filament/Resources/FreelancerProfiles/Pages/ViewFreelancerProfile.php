@@ -8,4 +8,12 @@ use Filament\Resources\Pages\ViewRecord;
 class ViewFreelancerProfile extends ViewRecord
 {
     protected static string $resource = FreelancerProfileResource::class;
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            FreelancerProfileResource::featureAction(),
+            FreelancerProfileResource::unfeatureAction(),
+        ];
+    }
 }
