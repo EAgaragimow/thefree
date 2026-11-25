@@ -1,17 +1,14 @@
 import Swiper from 'swiper';
-import { FreeMode } from 'swiper/modules';
 import 'swiper/css';
-import 'swiper/css/free-mode';
 
 /**
- * A free-scrolling row of slides that are as wide as their content (see the highlight gallery).
- * `$el` is the `.swiper` element; the instance is kept on `$el.swiper`.
+ * A slider with one full-width slide in view that moves one slide at a time and whose height
+ * follows the slide's content (see the highlight gallery). `element` is the `.swiper` element;
+ * the instance is kept on `element.swiper`.
  */
-window.freeSlider = (element) => new Swiper(element, {
-    modules: [FreeMode],
-    slidesPerView: 'auto',
-    spaceBetween: 12,
-    freeMode: true,
+window.gallerySlider = (element) => new Swiper(element, {
+    slidesPerView: 1,
+    autoHeight: true,
     grabCursor: true,
     observer: true,
     observeParents: true,

@@ -227,18 +227,18 @@
                         @endif
 
                         @if ($highlight['gallery'] !== [])
-                            {{-- Free-scrolling slider; slides are as wide as their image. Images load lazily inside the closed modal, so the slider re-measures whenever one finishes loading. --}}
+                            {{-- Slider with one full-width slide at a time, as tall as its image. Images load lazily inside the closed modal, so the slider re-measures whenever one finishes loading. --}}
                             <div
                                 class="swiper"
                                 wire:ignore
                                 x-data
-                                x-init="$nextTick(() => window.freeSlider($el))"
+                                x-init="$nextTick(() => window.gallerySlider($el))"
                                 x-on:load.capture="$el.swiper?.update()"
                             >
                                 <div class="swiper-wrapper">
                                     @foreach ($highlight['gallery'] as $image)
-                                        <div class="swiper-slide !w-auto">
-                                            <img src="{{ $url($image) }}" alt="" loading="lazy" class="h-[500px] w-auto max-w-none rounded select-none">
+                                        <div class="swiper-slide">
+                                            <img src="{{ $url($image) }}" alt="" loading="lazy" class="h-auto w-full rounded select-none">
                                         </div>
                                     @endforeach
                                 </div>
