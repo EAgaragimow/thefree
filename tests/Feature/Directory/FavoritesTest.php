@@ -125,14 +125,14 @@ it('removes favorites together with the freelancer profile', function () {
     expect($client->favoriteFreelancers()->count())->toBe(0);
 });
 
-it('recommends matching freelancers on the dashboard', function () {
+it('recommends matching freelancers on the recommended page', function () {
     $function = ProfessionalFunction::factory()->create();
     $client = User::factory()->client()->paid()->create();
     $client->brandProfile()->create(['company_name' => 'Acme'])->professionalFunctions()->attach($function);
 
     directoryProfile(['professional_function_id' => $function->id], ['name' => 'Right fit']);
 
-    Livewire::actingAs($client)->test('pages::client.dashboard')
+    Livewire::actingAs($client)->test('pages::client.recommended')
         ->assertSee('Recommended freelancers')
         ->assertSee('Right fit');
 });
@@ -140,7 +140,7 @@ it('recommends matching freelancers on the dashboard', function () {
 it('asks a free client to upgrade when they click a recommendation', function () {
     $profile = directoryProfile(user: ['name' => 'Right fit']);
 
-    Livewire::actingAs(User::factory()->client()->create())->test('pages::client.dashboard')
+    Livewire::actingAs(User::factory()->client()->create())->test('pages::client.recommended')
         ->assertSee('Right fit')
         ->assertDontSee(route('directory.show', $profile))
         ->assertSeeHtml('data-modal="upgrade"');
@@ -164,7 +164,7 @@ it('lists the recommendations from the highest score to the lowest', function ()
         directoryProfile(['professional_function_id' => $function->id, 'score' => $score], ['name' => $name]);
     }
 
-    Livewire::actingAs($client)->test('pages::client.dashboard')
+    Livewire::actingAs($client)->test('pages::client.recommended')
         ->assertSeeInOrder(['First', 'Second', 'Third', 'Fourth']);
 });
 

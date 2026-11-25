@@ -26,6 +26,9 @@ Route::middleware(['auth', 'active', 'verified'])->group(function () {
 
     Route::middleware('role:client')->prefix('client')->name('client.')->group(function () {
         Route::livewire('/dashboard', 'pages::client.dashboard')->name('dashboard');
+        Route::livewire('/recommended', 'pages::client.recommended')->name('recommended');
+        Route::livewire('/calls', 'pages::client.calls')->name('calls');
+        Route::livewire('/projects', 'pages::client.projects')->name('projects');
         Route::livewire('/favorites', 'pages::client.favorites')->name('favorites');
         Route::livewire('/brand-profile', 'pages::client.brand-profile')->name('brand-profile');
     });

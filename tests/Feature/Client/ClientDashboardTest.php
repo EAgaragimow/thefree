@@ -34,7 +34,7 @@ it('stops prompting once the brand profile is complete', function () {
         ->assertDontSee('Complete your brand profile');
 });
 
-it('shows the brand profile above the recommendations', function () {
+it('shows the brand profile on the dashboard', function () {
     $user = User::factory()->client()->create();
     $function = ProfessionalFunction::factory()->create(['name' => 'Paid Media']);
     $role = ProfessionalRole::factory()->for($function, 'professionalFunction')->create(['name' => 'Growth Marketer']);
@@ -51,7 +51,7 @@ it('shows the brand profile above the recommendations', function () {
     $brand->professionalRoles()->attach($role);
 
     Livewire::actingAs($user)->test('pages::client.dashboard')
-        ->assertSeeInOrder(['Acme Goods', 'Austin, United States', 'We make everyday things.', 'hello@acme.test', 'Home &amp; Garden', 'Paid Media', 'Growth Marketer', 'LinkedIn', 'Recommended freelancers'], false)
+        ->assertSeeInOrder(['Acme Goods', 'Austin, United States', 'We make everyday things.', 'hello@acme.test', 'Home &amp; Garden', 'Paid Media', 'Growth Marketer', 'LinkedIn', 'Calls'], false)
         ->assertSeeHtml('href="https://linkedin.com/company/acme"')
         ->assertDontSeeHtml('javascript:alert(1)')
         ->assertSeeHtml('href="'.route('client.brand-profile').'"');
@@ -81,4 +81,11 @@ it('leaves out the brand details that are empty', function () {
 it('shows no brand card before the brand profile exists', function () {
     Livewire::actingAs(User::factory()->client()->create())->test('pages::client.dashboard')
         ->assertDontSee('Edit brand profile');
+});
+
+it('lists calls and projects as separate groups, calls first', function () {
+    Livewire::actingAs(User::factory()->client()->create())->test('pages::client.dashboard')
+        ->assertSeeInOrder(['Calls', 'You have no upcoming calls.', 'Projects', 'You have no projects yet.'])
+        ->assertDontSee('Recommended freelancers')
+        ->assertDontSee('Projects and calls');
 });

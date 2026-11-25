@@ -1,11 +1,7 @@
 <?php
 
-use App\Actions\Directory\DirectoryPreview;
-use App\Actions\Directory\ToggleFavorite;
 use App\Enums\SubscriptionType;
 use App\Models\BrandProfile;
-use App\Models\FreelancerProfile;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -33,41 +29,6 @@ new #[Title('Dashboard')] class extends Component {
     {
         return auth()->user()->subscription_type === SubscriptionType::FreePlan;
     }
-
-    /**
-     * How many recommendations the dashboard lists (the directory preview may hold a few more).
-     */
-    public const RECOMMENDED = 6;
-
-    /**
-     * Freelancers that fit the brand profile, from the highest score to the lowest.
-     *
-     * @return \Illuminate\Support\Collection<int, FreelancerProfile>
-     */
-    public function recommended(): \Illuminate\Support\Collection
-    {
-        return app(DirectoryPreview::class)(auth()->user()->brandProfile)
-            ->sortByDesc('score')
-            ->values()
-            ->take(self::RECOMMENDED);
-    }
-
-    /**
-     * Ids of the freelancers the client saved, to show them as saved on the cards.
-     *
-     * @return list<int>
-     */
-    public function favoriteIds(): array
-    {
-        return auth()->user()->favoriteFreelancers()->pluck('freelancer_profiles.id')->all();
-    }
-
-    public function toggleFavorite(int $profileId): void
-    {
-        $profile = FreelancerProfile::query()->visible()->findOrFail($profileId);
-
-        app(ToggleFavorite::class)(auth()->user(), $profile);
-    }
 };
 ?>
 
@@ -94,10 +55,6 @@ new #[Title('Dashboard')] class extends Component {
             </x-slot>
         </flux:callout>
     @endunless
-
-    @php($hasFullAccess = Gate::allows('view-full-directory'))
-    @php($favoriteIds = $this->favoriteIds())
-    @php($canFavorite = Gate::allows('favorite-freelancers'))
 
     @if ($brand = $this->brand())
         @php($socialLabels = ['linkedin' => 'LinkedIn', 'twitter' => 'X / Twitter', 'instagram' => 'Instagram'])
@@ -169,38 +126,22 @@ new #[Title('Dashboard')] class extends Component {
         </flux:card>
     @endif
 
+    {{-- The first six calls and projects will be listed here, three to a row, once they exist. --}}
     <section class="space-y-3">
         <div class="flex items-center justify-between gap-3">
-            <flux:heading size="lg">Recommended freelancers</flux:heading>
-            <flux:button size="sm" variant="ghost" href="{{ route('directory.index') }}">Browse all</flux:button>
+            <flux:heading size="lg">Calls</flux:heading>
+            <flux:button size="sm" variant="ghost" icon-trailing="arrow-right" href="{{ route('client.calls') }}">View all</flux:button>
         </div>
 
-        @php($recommended = $this->recommended())
-
-        @if ($recommended->isEmpty())
-            <flux:text>There are no published freelancers yet. Please check back soon.</flux:text>
-        @else
-            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                @foreach ($recommended as $profile)
-                    <x-freelancer-card
-                        wire:key="recommended-{{ $profile->id }}"
-                        :profile="$profile"
-                        :href="$hasFullAccess ? route('directory.show', $profile) : null"
-                        :locked="! $hasFullAccess"
-                        :can-favorite="$canFavorite"
-                        :favorited="in_array($profile->id, $favoriteIds, true)"
-                    />
-                @endforeach
-            </div>
-        @endif
+        <flux:text>You have no upcoming calls.</flux:text>
     </section>
 
-    <flux:card>
-        <flux:heading>Projects and calls</flux:heading>
-        <flux:text class="mt-1">You have no projects or calls yet.</flux:text>
-    </flux:card>
+    <section class="space-y-3">
+        <div class="flex items-center justify-between gap-3">
+            <flux:heading size="lg">Projects</flux:heading>
+            <flux:button size="sm" variant="ghost" icon-trailing="arrow-right" href="{{ route('client.projects') }}">View all</flux:button>
+        </div>
 
-    @unless ($hasFullAccess)
-        <x-upgrade-modal />
-    @endunless
+        <flux:text>You have no projects yet.</flux:text>
+    </section>
 </div>
