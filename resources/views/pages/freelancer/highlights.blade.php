@@ -358,7 +358,7 @@ new #[Title('Highlights')] class extends Component {
             <flux:heading size="lg">{{ $editingUid === null ? 'Add highlight' : 'Edit highlight' }}</flux:heading>
 
             <flux:field>
-                <flux:label>Title</flux:label>
+                <flux:label>Title *</flux:label>
                 <flux:input wire:model="title" placeholder="Rebranding for Acme" />
                 <flux:error name="title" />
             </flux:field>
@@ -424,7 +424,9 @@ new #[Title('Highlights')] class extends Component {
                 @foreach ($video_urls as $index => $video)
                     <div wire:key="video-{{ $index }}" class="space-y-1">
                         <div class="flex gap-2">
-                            <flux:input wire:model="video_urls.{{ $index }}" type="url" placeholder="https://www.youtube.com/watch?v=…" class="flex-1" />
+                            <div class="min-w-0 flex-1">
+                                <flux:input wire:model="video_urls.{{ $index }}" type="url" placeholder="https://www.youtube.com/watch?v=…" />
+                            </div>
                             <flux:button type="button" size="sm" variant="ghost" wire:click="removeVideo({{ $index }})">Remove</flux:button>
                         </div>
                         <flux:error name="video_urls.{{ $index }}" />
@@ -441,8 +443,12 @@ new #[Title('Highlights')] class extends Component {
                 @foreach ($links as $index => $link)
                     <div wire:key="link-{{ $index }}" class="space-y-1">
                         <div class="flex gap-2">
-                            <flux:input wire:model="links.{{ $index }}.label" placeholder="Label" class="w-1/3" />
-                            <flux:input wire:model="links.{{ $index }}.url" type="url" placeholder="https://" class="flex-1" />
+                            <div class="w-1/3 min-w-0">
+                                <flux:input wire:model="links.{{ $index }}.label" placeholder="Label" />
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <flux:input wire:model="links.{{ $index }}.url" type="url" placeholder="https://" />
+                            </div>
                             <flux:button type="button" size="sm" variant="ghost" wire:click="removeLink({{ $index }})">Remove</flux:button>
                         </div>
                         <flux:error name="links.{{ $index }}.url" />

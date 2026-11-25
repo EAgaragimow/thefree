@@ -212,43 +212,59 @@
                             </div>
                         </button>
                     </flux:modal.trigger>
+                @endforeach
+            </div>
 
-                    <flux:modal name="highlight-{{ $highlight['uid'] }}" class="md:w-[48rem]">
-                        <div class="space-y-5">
-                            <flux:heading size="lg">{{ $highlight['title'] }}</flux:heading>
+            {{-- The modals live outside the grid so they take no grid cell, and `contents` keeps the wrapper out of the section spacing. --}}
+            <div class="contents">
+            @foreach ($content->highlights() as $highlight)
+                <flux:modal name="highlight-{{ $highlight['uid'] }}" class="md:w-[48rem]">
+                    <div class="space-y-5">
+                        <flux:heading size="lg">{{ $highlight['title'] }}</flux:heading>
 
-                            @if ($highlight['description'])
-                                <flux:text class="whitespace-pre-line">{{ $highlight['description'] }}</flux:text>
-                            @endif
+                        @if ($highlight['description'])
+                            <flux:text class="whitespace-pre-line">{{ $highlight['description'] }}</flux:text>
+                        @endif
 
-                            @if ($highlight['gallery'] !== [])
-                                <div class="grid gap-3 sm:grid-cols-2">
+                        @if ($highlight['gallery'] !== [])
+                            {{-- Free-scrolling slider; slides are as wide as their image. Images load lazily inside the closed modal, so the slider re-measures whenever one finishes loading. --}}
+                            <div
+                                class="swiper"
+                                wire:ignore
+                                x-data
+                                x-init="$nextTick(() => window.freeSlider($el))"
+                                x-on:load.capture="$el.swiper?.update()"
+                            >
+                                <div class="swiper-wrapper">
                                     @foreach ($highlight['gallery'] as $image)
-                                        <img src="{{ $url($image) }}" alt="" loading="lazy" class="w-full rounded object-cover">
+                                        <div class="swiper-slide !w-auto">
+                                            <img src="{{ $url($image) }}" alt="" loading="lazy" class="h-[500px] w-auto max-w-none rounded select-none">
+                                        </div>
                                     @endforeach
                                 </div>
-                            @endif
+                            </div>
+                        @endif
 
-                            @foreach ($highlight['video_urls'] as $video)
-                                @if ($embed = VideoEmbed::embedUrl($video))
-                                    <div class="aspect-video overflow-hidden rounded">
-                                        <iframe src="{{ $embed }}" title="{{ $highlight['title'] }}" loading="lazy" class="size-full" allow="fullscreen; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"></iframe>
-                                    </div>
-                                @endif
-                            @endforeach
-
-                            @if ($highlight['links'] !== [])
-                                <ul class="list-disc space-y-1 ps-5">
-                                    @foreach ($highlight['links'] as $link)
-                                        @if ($safeLink($link['url']))
-                                            <li><a href="{{ $safeLink($link['url']) }}" target="_blank" rel="noopener noreferrer nofollow" class="underline">{{ $link['label'] ?: $link['url'] }}</a></li>
-                                        @endif
-                                    @endforeach
-                                </ul>
+                        @foreach ($highlight['video_urls'] as $video)
+                            @if ($embed = VideoEmbed::embedUrl($video))
+                                <div class="aspect-video overflow-hidden rounded">
+                                    <iframe src="{{ $embed }}" title="{{ $highlight['title'] }}" loading="lazy" class="size-full" allow="fullscreen; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"></iframe>
+                                </div>
                             @endif
-                        </div>
-                    </flux:modal>
-                @endforeach
+                        @endforeach
+
+                        @if ($highlight['links'] !== [])
+                            <ul class="list-disc space-y-1 ps-5">
+                                @foreach ($highlight['links'] as $link)
+                                    @if ($safeLink($link['url']))
+                                        <li><a href="{{ $safeLink($link['url']) }}" target="_blank" rel="noopener noreferrer nofollow" class="underline">{{ $link['label'] ?: $link['url'] }}</a></li>
+                                    @endif
+                                @endforeach
+                            </ul>
+                        @endif
+                    </div>
+                </flux:modal>
+            @endforeach
             </div>
         </section>
     @endif

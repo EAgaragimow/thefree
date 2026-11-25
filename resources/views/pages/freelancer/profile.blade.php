@@ -449,7 +449,7 @@ new #[Title('My profile')] class extends Component {
                     </flux:field>
 
                     <flux:field>
-                        <flux:label>Time zone</flux:label>
+                        <flux:label>Time zone *</flux:label>
                         <flux:select wire:model="timezone">
                             @foreach ($this->timezones() as $zone)
                                 <flux:select.option value="{{ $zone }}">{{ $zone }}</flux:select.option>
@@ -470,7 +470,7 @@ new #[Title('My profile')] class extends Component {
                 <flux:heading size="lg">Function and roles</flux:heading>
 
                 <flux:field>
-                    <flux:label>Function</flux:label>
+                    <flux:label>Function *</flux:label>
                     <flux:description>The one area you work in.</flux:description>
                     <flux:select wire:model="professional_function_id" placeholder="Select your function">
                         @foreach ($this->functions() as $function)
@@ -483,6 +483,7 @@ new #[Title('My profile')] class extends Component {
                 <x-multi-select
                     wire:model="role_ids"
                     label="Roles"
+                    required
                     description="Select up to 3. The order of selection matters: the first role you pick is your main role, then your secondary and third role."
                     :options="$this->roleOptions()"
                     :max="ProfileContent::MAX_ROLES"
@@ -498,6 +499,7 @@ new #[Title('My profile')] class extends Component {
                 <x-multi-select
                     wire:model="skill_ids"
                     label="Skills"
+                    required
                     description="Select up to {{ ProfileContent::MAX_SKILLS }} that apply."
                     :options="$this->skillOptions()"
                     :min="ProfileContent::MIN_SKILLS"
@@ -507,6 +509,7 @@ new #[Title('My profile')] class extends Component {
                 <x-multi-select
                     wire:model="tool_ids"
                     label="Tools and platforms"
+                    required
                     description="Select up to {{ ProfileContent::MAX_TOOLS }} that apply."
                     :options="$this->toolOptions()"
                     :min="ProfileContent::MIN_TOOLS"
@@ -515,7 +518,7 @@ new #[Title('My profile')] class extends Component {
 
                 <x-multi-select
                     wire:model="industry_ids"
-                    label="Industry experience (optional)"
+                    label="Industry experience"
                     description="Select up to {{ ProfileContent::MAX_INDUSTRIES }} that apply."
                     :options="$this->industryOptions()"
                     :max="ProfileContent::MAX_INDUSTRIES"
@@ -526,13 +529,13 @@ new #[Title('My profile')] class extends Component {
                 <flux:heading size="lg">Rates and availability</flux:heading>
 
                 <flux:field>
-                    <flux:label>What's your hourly rate?</flux:label>
+                    <flux:label>What's your hourly rate? *</flux:label>
                     <flux:description>In US dollars.</flux:description>
                     <flux:input type="number" wire:model="hourly_rate" min="1" step="0.01" inputmode="decimal" icon="currency-dollar" />
                     <flux:error name="hourly_rate" />
                 </flux:field>
 
-                <flux:radio.group wire:model.live="offers_monthly_retainers" label="Do you offer monthly retainers?">
+                <flux:radio.group wire:model.live="offers_monthly_retainers" label="Do you offer monthly retainers? *">
                     <flux:radio value="yes" label="Yes" />
                     <flux:radio value="no" label="No" />
                 </flux:radio.group>
@@ -540,13 +543,13 @@ new #[Title('My profile')] class extends Component {
 
                 @if ($offers_monthly_retainers === 'yes')
                     <flux:field>
-                        <flux:label>Describe the scope of services your monthly retainer offers</flux:label>
+                        <flux:label>Describe the scope of services your monthly retainer offers *</flux:label>
                         <flux:textarea wire:model="monthly_retainers_description" rows="3" />
                         <flux:error name="monthly_retainers_description" />
                     </flux:field>
 
                     <flux:field>
-                        <flux:label>What do your retainers start at?</flux:label>
+                        <flux:label>What do your retainers start at? *</flux:label>
                         <flux:description>You can customize retainers per client; this is just your starting price, in US dollars per month.</flux:description>
                         <flux:input type="number" wire:model="monthly_retainers_from" min="1" step="0.01" inputmode="decimal" icon="currency-dollar" />
                         <flux:error name="monthly_retainers_from" />
@@ -554,7 +557,7 @@ new #[Title('My profile')] class extends Component {
                 @endif
 
                 <flux:field>
-                    <flux:label>How many hours per week are you available?</flux:label>
+                    <flux:label>How many hours per week are you available? *</flux:label>
                     <flux:select wire:model="weekly_hours" placeholder="Select your availability">
                         @foreach (WeeklyHours::cases() as $hours)
                             <flux:select.option value="{{ $hours->value }}">{{ $hours->value }}</flux:select.option>
@@ -563,7 +566,7 @@ new #[Title('My profile')] class extends Component {
                     <flux:error name="weekly_hours" />
                 </flux:field>
 
-                <flux:radio.group wire:model="open_to_full_time" label="Are you open to full-time opportunities?">
+                <flux:radio.group wire:model="open_to_full_time" label="Are you open to full-time opportunities? *">
                     <flux:radio value="yes" label="Yes" />
                     <flux:radio value="no" label="No" />
                 </flux:radio.group>
@@ -573,7 +576,7 @@ new #[Title('My profile')] class extends Component {
             <section class="space-y-4">
                 <div>
                     <flux:heading size="lg">What types of brands are you a good fit for?</flux:heading>
-                    <flux:text>Describe the kinds of companies or growth problems you're the best fit for. Optional.</flux:text>
+                    <flux:text>Describe the kinds of companies or growth problems you're the best fit for.</flux:text>
                 </div>
 
                 <flux:field>
@@ -605,19 +608,19 @@ new #[Title('My profile')] class extends Component {
                     <flux:card wire:key="experience-{{ $index }}" class="space-y-4">
                         <div class="grid gap-4 sm:grid-cols-2">
                             <flux:field>
-                                <flux:label>Company</flux:label>
+                                <flux:label>Company *</flux:label>
                                 <flux:input wire:model="experiences.{{ $index }}.company" />
                                 <flux:error name="experiences.{{ $index }}.company" />
                             </flux:field>
 
                             <flux:field>
-                                <flux:label>Role</flux:label>
+                                <flux:label>Role *</flux:label>
                                 <flux:input wire:model="experiences.{{ $index }}.role" />
                                 <flux:error name="experiences.{{ $index }}.role" />
                             </flux:field>
 
                             <flux:field>
-                                <flux:label>Start date</flux:label>
+                                <flux:label>Start date *</flux:label>
                                 <flux:input type="date" wire:model="experiences.{{ $index }}.started_at" />
                                 <flux:error name="experiences.{{ $index }}.started_at" />
                             </flux:field>

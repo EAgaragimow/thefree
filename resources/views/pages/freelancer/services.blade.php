@@ -261,7 +261,7 @@ new #[Title('Services')] class extends Component {
             <flux:heading size="lg">{{ $editingUid === null ? 'Add service' : 'Edit service' }}</flux:heading>
 
             <flux:field>
-                <flux:label>Title</flux:label>
+                <flux:label>Title *</flux:label>
                 <flux:input wire:model="title" maxlength="{{ ProfileContent::MAX_SERVICE_TITLE }}" placeholder="Brand identity design" />
                 <flux:error name="title" />
             </flux:field>
@@ -273,7 +273,7 @@ new #[Title('Services')] class extends Component {
                 <flux:error name="description" />
             </flux:field>
 
-            <flux:radio.group wire:model.live="pricing_mode" label="Pricing">
+            <flux:radio.group wire:model.live="pricing_mode" label="Pricing *">
                 @foreach (PricingMode::cases() as $mode)
                     <flux:radio value="{{ $mode->value }}" label="{{ $mode->label() }}" />
                 @endforeach
@@ -282,7 +282,7 @@ new #[Title('Services')] class extends Component {
 
             @if (PricingMode::tryFrom($pricing_mode)?->requiresPrice())
                 <flux:field>
-                    <flux:label>{{ $pricing_mode === 'starting-from' ? 'Starting price (USD)' : 'Price (USD)' }}</flux:label>
+                    <flux:label>{{ $pricing_mode === 'starting-from' ? 'Starting price (USD)' : 'Price (USD)' }} *</flux:label>
                     <flux:input wire:model="price" type="text" inputmode="decimal" placeholder="1500" />
                     <flux:error name="price" />
                 </flux:field>

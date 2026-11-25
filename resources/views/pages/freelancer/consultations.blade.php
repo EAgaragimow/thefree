@@ -244,14 +244,14 @@ new #[Title('Consultations')] class extends Component {
 
             <div class="grid gap-4 sm:grid-cols-2">
                 <flux:field>
-                    <flux:label>Length (minutes)</flux:label>
+                    <flux:label>Length (minutes) *</flux:label>
                     <flux:input wire:model="duration_minutes" type="number" min="{{ ProfileContent::MIN_CONSULTATION_MINUTES }}" max="{{ ProfileContent::MAX_CONSULTATION_MINUTES }}" step="5" />
                     <flux:error name="duration_minutes" />
                 </flux:field>
 
                 @if ($editingType === ConsultationType::Paid->value)
                     <flux:field>
-                        <flux:label>Price (USD)</flux:label>
+                        <flux:label>Price (USD) *</flux:label>
                         <flux:input wire:model="price" type="text" inputmode="decimal" placeholder="120" />
                         <flux:error name="price" />
                     </flux:field>
@@ -271,7 +271,7 @@ new #[Title('Consultations')] class extends Component {
 
             <div class="space-y-2">
                 <div>
-                    <flux:heading>Availability</flux:heading>
+                    <flux:heading>Availability *</flux:heading>
                     <flux:text size="sm">Pick the days you take these calls and the hours, in 24-hour format. Times are in {{ $this->timezone() }}, your profile time zone.</flux:text>
                 </div>
 
