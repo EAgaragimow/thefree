@@ -128,71 +128,73 @@ new #[Title('Dashboard')] class extends Component {
         </flux:card>
     @endif
 
-    @if ($profile = $this->profile())
-        @php($content = $this->content($profile))
-        @php($consultations = $this->offeredConsultations($content))
+    @php($profile = $this->profile())
+    @php($content = $profile ? $this->content($profile) : ProfileContent::fromArray([]))
+    @php($consultations = $this->offeredConsultations($content))
 
-        <div class="grid gap-4 lg:grid-cols-2">
-            <x-settings-group heading="Highlights" :href="route('freelancer.highlights')" :empty="$content->highlights() === []">
-                <ul class="space-y-2">
-                    @foreach ($content->highlights() as $highlight)
-                        <li wire:key="highlight-{{ $highlight['uid'] }}">
-                            <flux:heading size="sm">{{ $highlight['title'] }}</flux:heading>
-                            @if ($highlight['description'])
-                                <flux:text size="sm">{{ Str::limit($highlight['description'], 90) }}</flux:text>
-                            @endif
-                        </li>
-                    @endforeach
-                </ul>
-            </x-settings-group>
+    <flux:card>
+        <flux:heading>Requests</flux:heading>
+        <flux:text class="mt-1">You have no call requests.</flux:text>
+    </flux:card>
 
-            <x-settings-group heading="Services" :href="route('freelancer.services')" :empty="$content->services() === []">
-                <ul class="space-y-2">
-                    @foreach ($content->services() as $service)
-                        <li wire:key="service-{{ $service['uid'] }}" class="flex items-center justify-between gap-3">
-                            <flux:heading size="sm">{{ $service['title'] }}</flux:heading>
-                            <flux:badge size="sm">{{ $this->priceLabel($service) }}</flux:badge>
-                        </li>
-                    @endforeach
-                </ul>
-            </x-settings-group>
+    <flux:card>
+        <flux:heading>Calls</flux:heading>
+        <flux:text class="mt-1">You have no upcoming calls.</flux:text>
+    </flux:card>
 
-            <x-settings-group heading="Work history" :href="route('freelancer.profile')" :empty="$content->experiences() === []">
-                <ul class="space-y-2">
-                    @foreach ($content->experiences() as $experience)
-                        <li wire:key="experience-{{ $loop->index }}">
-                            <flux:heading size="sm">{{ $experience['role'] }} · {{ $experience['company'] }}</flux:heading>
-                            <flux:text size="sm">{{ $this->period($experience) }}</flux:text>
-                        </li>
-                    @endforeach
-                </ul>
-            </x-settings-group>
+    <flux:card>
+        <flux:heading>Projects</flux:heading>
+        <flux:text class="mt-1">You have no projects yet.</flux:text>
+    </flux:card>
 
-            <x-settings-group heading="Consultations" :href="route('freelancer.consultations')" :empty="$consultations === []">
-                <ul class="space-y-3">
-                    @foreach ($consultations as $offer)
-                        <li wire:key="consultation-{{ $offer['type'] }}">
-                            <div class="flex items-center justify-between gap-3">
-                                <flux:heading size="sm">{{ ConsultationType::from($offer['type'])->label() }}</flux:heading>
-                                <flux:badge size="sm">{{ $offer['price_cents'] > 0 ? $this->money($offer['price_cents']) : 'Free' }}</flux:badge>
-                            </div>
-                            <flux:text size="sm">{{ $offer['duration_minutes'] }} minutes · {{ implode(', ', ConsultationSchedule::summary($offer['availability'])) }}</flux:text>
-                        </li>
-                    @endforeach
-                </ul>
-            </x-settings-group>
-        </div>
-    @endif
+    <div class="grid gap-4 lg:grid-cols-2">
+        <x-settings-group heading="Highlights" :href="route('freelancer.highlights')" :empty="$content->highlights() === []">
+            <ul class="space-y-2">
+                @foreach ($content->highlights() as $highlight)
+                    <li wire:key="highlight-{{ $highlight['uid'] }}">
+                        <flux:heading size="sm">{{ $highlight['title'] }}</flux:heading>
+                        @if ($highlight['description'])
+                            <flux:text size="sm">{{ Str::limit($highlight['description'], 90) }}</flux:text>
+                        @endif
+                    </li>
+                @endforeach
+            </ul>
+        </x-settings-group>
 
-    <div class="grid gap-4 sm:grid-cols-2">
-        <flux:card>
-            <flux:heading>Requests and projects</flux:heading>
-            <flux:text class="mt-1">You have no requests or projects yet.</flux:text>
-        </flux:card>
+        <x-settings-group heading="Services" :href="route('freelancer.services')" :empty="$content->services() === []">
+            <ul class="space-y-2">
+                @foreach ($content->services() as $service)
+                    <li wire:key="service-{{ $service['uid'] }}" class="flex items-center justify-between gap-3">
+                        <flux:heading size="sm">{{ $service['title'] }}</flux:heading>
+                        <flux:badge size="sm">{{ $this->priceLabel($service) }}</flux:badge>
+                    </li>
+                @endforeach
+            </ul>
+        </x-settings-group>
 
-        <flux:card>
-            <flux:heading>Calls</flux:heading>
-            <flux:text class="mt-1">You have no upcoming calls.</flux:text>
-        </flux:card>
+        <x-settings-group heading="Work history" :href="route('freelancer.profile')" :empty="$content->experiences() === []">
+            <ul class="space-y-2">
+                @foreach ($content->experiences() as $experience)
+                    <li wire:key="experience-{{ $loop->index }}">
+                        <flux:heading size="sm">{{ $experience['role'] }} · {{ $experience['company'] }}</flux:heading>
+                        <flux:text size="sm">{{ $this->period($experience) }}</flux:text>
+                    </li>
+                @endforeach
+            </ul>
+        </x-settings-group>
+
+        <x-settings-group heading="Consultations" :href="route('freelancer.consultations')" :empty="$consultations === []">
+            <ul class="space-y-3">
+                @foreach ($consultations as $offer)
+                    <li wire:key="consultation-{{ $offer['type'] }}">
+                        <div class="flex items-center justify-between gap-3">
+                            <flux:heading size="sm">{{ ConsultationType::from($offer['type'])->label() }}</flux:heading>
+                            <flux:badge size="sm">{{ $offer['price_cents'] > 0 ? $this->money($offer['price_cents']) : 'Free' }}</flux:badge>
+                        </div>
+                        <flux:text size="sm">{{ $offer['duration_minutes'] }} minutes · {{ implode(', ', ConsultationSchedule::summary($offer['availability'])) }}</flux:text>
+                    </li>
+                @endforeach
+            </ul>
+        </x-settings-group>
     </div>
 </div>

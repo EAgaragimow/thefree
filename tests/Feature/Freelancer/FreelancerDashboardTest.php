@@ -51,12 +51,12 @@ it('groups highlights, services, work history and consultations with a link to e
         ->assertSeeHtml('href="'.route('freelancer.consultations').'"');
 });
 
-it('says there are no items yet and offers the settings when a group is empty', function () {
+it('says there are no items yet when a group is empty, without an extra call to action', function () {
     $profile = FreelancerProfile::factory()->published()->create();
 
     Livewire::actingAs($profile->user)->test('pages::freelancer.dashboard')
         ->assertSee('No items yet.', 4)
-        ->assertSee('Go to settings', 4);
+        ->assertDontSee('Go to settings');
 });
 
 it('leaves out a consultation that is switched off', function () {
@@ -80,4 +80,15 @@ it('shows pending changes rather than the live items', function () {
         ->assertSee('Draft service')
         ->assertSee('Custom quote')
         ->assertDontSee('Live service');
+});
+
+it('lists requests, calls and projects above the profile groups', function () {
+    $profile = FreelancerProfile::factory()->published()->create();
+
+    Livewire::actingAs($profile->user)->test('pages::freelancer.dashboard')
+        ->assertSeeInOrder(['Requests', 'Calls', 'Projects', 'Highlights', 'Services', 'Work history', 'Consultations'])
+        ->assertSee('You have no call requests.')
+        ->assertSee('You have no upcoming calls.')
+        ->assertSee('You have no projects yet.')
+        ->assertDontSee('Requests and projects');
 });
