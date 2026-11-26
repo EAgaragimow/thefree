@@ -134,12 +134,12 @@ it('leaves brands that never filled in a profile in the brand count', function (
         ->assertSeeInOrder(['Brands', '2', '2 active']);
 });
 
-it('orders the navigation groups: dashboard, People, Moderation, Catalog, System', function () {
+it('orders the navigation groups: dashboard, People, Moderation, Content, Catalog, System', function () {
     $this->actingAs(User::factory()->admin()->create());
 
     $groups = collect(Filament::getPanel('admin')->getNavigation())
         ->map(fn ($group) => $group->getLabel())->values()
         ->all();
 
-    expect($groups)->toBe([null, 'People', 'Moderation', 'Catalog', 'System']);
+    expect($groups)->toBe([null, 'People', 'Moderation', 'Content', 'Catalog', 'System']);
 });

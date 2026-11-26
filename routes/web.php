@@ -33,6 +33,11 @@ Route::middleware(['auth', 'active', 'verified'])->group(function () {
         Route::livewire('/brand-profile', 'pages::client.brand-profile')->name('brand-profile');
     });
 
+    Route::middleware('role:client')->prefix('blog')->name('blog.')->group(function () {
+        Route::livewire('/', 'pages::blog.index')->name('index');
+        Route::livewire('/{slug}', 'pages::blog.show')->name('show');
+    });
+
     Route::middleware('role:freelancer')->prefix('freelancer')->name('freelancer.')->group(function () {
         Route::livewire('/dashboard', 'pages::freelancer.dashboard')->name('dashboard');
         Route::livewire('/profile', 'pages::freelancer.profile')->name('profile');

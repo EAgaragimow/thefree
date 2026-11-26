@@ -29,6 +29,7 @@
                     <flux:sidebar.item icon="briefcase" href="{{ route('client.projects') }}" :current="request()->routeIs('client.projects')">Projects</flux:sidebar.item>
                     <flux:sidebar.item icon="heart" href="{{ route('client.favorites') }}" :current="request()->routeIs('client.favorites')">Favourites</flux:sidebar.item>
                     <flux:sidebar.item icon="sparkles" href="{{ route('client.recommended') }}" :current="request()->routeIs('client.recommended')">Recommended</flux:sidebar.item>
+                    <flux:sidebar.item icon="newspaper" href="{{ route('blog.index') }}" :current="request()->routeIs('blog.*')">Blog</flux:sidebar.item>
                     <flux:sidebar.item icon="building-office" href="{{ route('client.brand-profile') }}" :current="request()->routeIs('client.brand-profile')">Brand settings</flux:sidebar.item>
                 @elseif ($user->isFreelancer())
                     <flux:sidebar.item icon="home" href="{{ route('freelancer.dashboard') }}" :current="request()->routeIs('freelancer.dashboard')">Dashboard</flux:sidebar.item>
