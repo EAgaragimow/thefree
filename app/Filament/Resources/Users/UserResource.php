@@ -37,6 +37,8 @@ class UserResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'People';
 
+    protected static ?int $navigationSort = 3;
+
     protected static ?string $recordTitleAttribute = 'name';
 
     public static function canCreate(): bool

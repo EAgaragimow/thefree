@@ -6,12 +6,10 @@ use App\Enums\WeeklyHours;
 use App\Models\FreelancerProfile;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection;
 
 /**
- * The full freelancer directory (Paid clients, freelancers, admins): search, filters, sorting and
- * the Featured block. It reads live, visible profiles only, so edits that are still waiting for
- * review never show up here.
+ * The full freelancer directory (Paid clients, freelancers, admins): search, filters and sorting.
+ * It reads live, visible profiles only, so edits that are still waiting for review never show up here.
  *
  * Every multi-select filter matches a freelancer who has any of the selected entries.
  *
@@ -56,35 +54,18 @@ class DirectoryQuery
     }
 
     /**
-     * One page of the regular list. Featured freelancers are listed separately
-     * ({@see featured()}), so they are left out here.
+     * One page of the directory.
      *
      * @param  Filters  $filters
      * @return LengthAwarePaginator<int, FreelancerProfile>
      */
     public function paginate(array $filters, string $sort = self::SORT_BEST): LengthAwarePaginator
     {
-        $query = $this->filtered($filters)->whereNull('featured_at');
+        $query = $this->filtered($filters);
 
         $this->applySort($query, $sort, $filters);
 
         return $query->forCard()->paginate(self::PER_PAGE);
-    }
-
-    /**
-     * Featured freelancers that match the filters, in the order the admin chose.
-     *
-     * @param  Filters  $filters
-     * @return Collection<int, FreelancerProfile>
-     */
-    public function featured(array $filters): Collection
-    {
-        return $this->filtered($filters)
-            ->whereNotNull('featured_at')
-            ->orderBy('featured_sort')
-            ->orderBy('id')
-            ->forCard()
-            ->get();
     }
 
     /**

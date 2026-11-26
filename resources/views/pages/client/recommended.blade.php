@@ -59,7 +59,7 @@ new #[Title('Recommended freelancers')] class extends Component {
                 <x-freelancer-card
                     wire:key="recommended-{{ $profile->id }}"
                     :profile="$profile"
-                    :href="$hasFullAccess ? route('directory.show', $profile) : null"
+                    :href="$hasFullAccess ? route('directory.show', $profile->slug) : null"
                     :locked="! $hasFullAccess"
                     :can-favorite="$canFavorite"
                     :favorited="in_array($profile->id, $favoriteIds, true)"

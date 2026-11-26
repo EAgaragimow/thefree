@@ -21,7 +21,7 @@ Route::middleware(['auth', 'active', 'verified'])->group(function () {
 
     Route::prefix('freelancers')->name('directory.')->group(function () {
         Route::livewire('/', 'pages::directory.index')->name('index');
-        Route::livewire('/{profile}', 'pages::directory.show')->whereNumber('profile')->name('show');
+        Route::livewire('/{profile}', 'pages::directory.show')->name('show');
     });
 
     Route::middleware('role:client')->prefix('client')->name('client.')->group(function () {

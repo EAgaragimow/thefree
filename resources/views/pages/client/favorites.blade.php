@@ -50,7 +50,7 @@ new #[Title('Favourites')] class extends Component {
                 <x-freelancer-card
                     wire:key="favorite-{{ $profile->id }}"
                     :profile="$profile"
-                    :href="$hasFullAccess ? route('directory.show', $profile) : null"
+                    :href="$hasFullAccess ? route('directory.show', $profile->slug) : null"
                     :locked="! $hasFullAccess"
                     :can-favorite="$canFavorite"
                     :favorited="true"

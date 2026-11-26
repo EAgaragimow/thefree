@@ -7,7 +7,7 @@ it('sends guests to the login page', function () {
     $profile = directoryProfile();
 
     $this->get(route('directory.index'))->assertRedirect(route('login'));
-    $this->get(route('directory.show', $profile))->assertRedirect(route('login'));
+    $this->get(route('directory.show', $profile->slug))->assertRedirect(route('login'));
 });
 
 it('lets every signed-in role open the directory', function (string $state) {
@@ -31,7 +31,7 @@ it('opens full profiles for paid clients, freelancers and admins', function (str
         'admin' => User::factory()->admin()->create(),
     };
 
-    $this->actingAs($user)->get(route('directory.show', $profile))
+    $this->actingAs($user)->get(route('directory.show', $profile->slug))
         ->assertOk()
         ->assertSee('Ada Lovelace')
         ->assertSee('Senior Laravel developer');
@@ -44,7 +44,7 @@ it('keeps full profiles from free and payment-restricted clients', function (str
         ? User::factory()->client()->create()
         : User::factory()->client()->paymentRestricted()->create();
 
-    $this->actingAs($user)->get(route('directory.show', $profile))
+    $this->actingAs($user)->get(route('directory.show', $profile->slug))
         ->assertForbidden()
         ->assertDontSee('Senior Laravel developer');
 })->with(['free', 'payment-restricted']);
@@ -59,7 +59,7 @@ it('does not show a profile that is not live', function (string $case) {
     };
 
     $this->actingAs(User::factory()->client()->paid()->create())
-        ->get(route('directory.show', $profile))
+        ->get(route('directory.show', $profile->slug))
         ->assertNotFound();
 })->with(['never published', 'suspended', 'restricted', 'deactivated', 'deleted']);
 
@@ -78,7 +78,7 @@ it('gives a free client a preview without links or rates', function () {
         ->assertSee('Grace Hopper')
         ->assertSee('Brand designer')
         ->assertSee('Upgrade to the Paid Plan')
-        ->assertDontSee(route('directory.show', $profile))
+        ->assertDontSee(route('directory.show', $profile->slug))
         ->assertDontSee('$123/h')
         ->assertDontSee('Search');
 });
@@ -90,7 +90,7 @@ it('gives a paid client links to profiles and the filters', function () {
         ->get(route('directory.index'))
         ->assertOk()
         ->assertSee('Grace Hopper')
-        ->assertSee(route('directory.show', $profile))
+        ->assertSee(route('directory.show', $profile->slug))
         ->assertSee('$123/h')
         ->assertSee('Search');
 });
@@ -127,4 +127,14 @@ it('lists the preview of a free client from the highest score to the lowest', fu
     Livewire::actingAs(User::factory()->client()->create())
         ->test('pages::directory.index')
         ->assertSeeInOrder(['First', 'Second', 'Third', 'Fourth']);
+});
+
+it('opens a profile at its slug and not at its numeric id', function () {
+    $profile = directoryProfile(user: ['name' => 'Ada Lovelace']);
+    $client = User::factory()->client()->paid()->create();
+
+    expect($profile->slug)->toBe('ada');
+
+    $this->actingAs($client)->get('/freelancers/ada')->assertOk()->assertSee('Ada Lovelace');
+    $this->actingAs($client)->get('/freelancers/'.$profile->id)->assertNotFound();
 });

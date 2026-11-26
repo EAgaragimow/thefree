@@ -12,7 +12,7 @@ use Illuminate\Support\Collection;
  *
  * They are the visible freelancers that best match the brand's saved functions, roles and
  * industry, best first. When fewer than {@see MINIMUM} match, the list is topped up with the
- * highest-scoring freelancers (Featured ones first, then newbies), as far as that many exist.
+ * highest-scoring freelancers (newbies first), as far as that many exist.
  */
 class DirectoryPreview
 {
@@ -33,8 +33,6 @@ class DirectoryPreview
 
         $fill = FreelancerProfile::query()->visible()
             ->whereNotIn('freelancer_profiles.id', $matches->pluck('id')->all())
-            ->orderByRaw('featured_at is null')
-            ->orderBy('featured_sort')
             ->orderByDesc('is_newbie')
             ->orderByDesc('score')
             ->orderBy('freelancer_profiles.id')

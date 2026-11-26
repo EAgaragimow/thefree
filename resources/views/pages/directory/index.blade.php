@@ -166,25 +166,22 @@ new #[Title('Freelancers')] class extends Component {
     /**
      * What the page lists: the whole directory with filters, or the preview a Free client gets.
      *
-     * @return array{full: bool, featured: iterable<FreelancerProfile>, results: iterable<FreelancerProfile>, paginator: \Illuminate\Contracts\Pagination\LengthAwarePaginator|null}
+     * @return array{full: bool, results: iterable<FreelancerProfile>, paginator: \Illuminate\Contracts\Pagination\LengthAwarePaginator|null}
      */
     public function listing(): array
     {
         if (! $this->hasFullAccess()) {
             return [
                 'full' => false,
-                'featured' => [],
                 'results' => app(DirectoryPreview::class)(auth()->user()->brandProfile)->sortByDesc('score')->values(),
                 'paginator' => null,
             ];
         }
 
-        $query = app(DirectoryQuery::class);
-        $paginator = $query->paginate($this->filters(), $this->sortKey());
+        $paginator = app(DirectoryQuery::class)->paginate($this->filters(), $this->sortKey());
 
         return [
             'full' => true,
-            'featured' => $paginator->onFirstPage() ? $query->featured($this->filters()) : [],
             'results' => $paginator,
             'paginator' => $paginator,
         ];
@@ -273,30 +270,8 @@ new #[Title('Freelancers')] class extends Component {
         </form>
     @endif
 
-    @if (count($listing['featured']))
-        <section class="space-y-3">
-            <flux:heading size="lg">Featured</flux:heading>
-
-            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                @foreach ($listing['featured'] as $profile)
-                    <x-freelancer-card
-                        wire:key="featured-{{ $profile->id }}"
-                        :profile="$profile"
-                        :href="route('directory.show', $profile)"
-                        :can-favorite="$canFavorite"
-                        :favorited="in_array($profile->id, $favoriteIds, true)"
-                    />
-                @endforeach
-            </div>
-        </section>
-    @endif
-
     <section class="space-y-3">
-        @if ($listing['full'] && count($listing['featured']))
-            <flux:heading size="lg">All freelancers</flux:heading>
-        @endif
-
-        @if (count($listing['results']) === 0 && count($listing['featured']) === 0)
+        @if (count($listing['results']) === 0)
             <flux:callout icon="magnifying-glass" heading="No freelancers found">
                 @if ($listing['full'] && $this->hasActiveFilters())
                     Try removing some filters or searching for something broader.
@@ -310,7 +285,7 @@ new #[Title('Freelancers')] class extends Component {
                     <x-freelancer-card
                         wire:key="profile-{{ $profile->id }}"
                         :profile="$profile"
-                        :href="$listing['full'] ? route('directory.show', $profile) : null"
+                        :href="$listing['full'] ? route('directory.show', $profile->slug) : null"
                         :locked="! $listing['full']"
                         :can-favorite="$canFavorite"
                         :favorited="in_array($profile->id, $favoriteIds, true)"

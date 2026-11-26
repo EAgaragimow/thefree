@@ -185,3 +185,14 @@ it('marks a freshly activated freelancer as a newbie', function () {
 
     expect(User::where('email', 'ada@example.com')->firstOrFail()->freelancerProfile->is_newbie)->toBeTrue();
 });
+
+it('gives a freshly activated freelancer a slug made from their name', function () {
+    approvedApplication($token);
+
+    Livewire::test('pages::freelancer.activate', ['token' => $token])
+        ->set('password', 'a-Strong-passw0rd!')
+        ->set('password_confirmation', 'a-Strong-passw0rd!')
+        ->call('activate');
+
+    expect(User::where('email', 'ada@example.com')->firstOrFail()->freelancerProfile->slug)->toBe('ada');
+});

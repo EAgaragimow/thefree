@@ -286,16 +286,14 @@ it('keeps approved revisions as history and opens a fresh one for the next edit'
 
 it('leaves admin-controlled fields untouched when a revision is approved', function () {
     Notification::fake();
-    $profile = FreelancerProfile::factory()->featured(3)->create(['score' => 7000]);
+    $profile = FreelancerProfile::factory()->create(['score' => 7000]);
     FreelancerProfileRevision::factory()->pendingReview()->create(['freelancer_profile_id' => $profile->id]);
 
     app(ApproveProfile::class)($profile->refresh()->openRevision, User::factory()->admin()->create());
 
     $profile->refresh();
 
-    expect($profile->score)->toBe(7000)
-        ->and($profile->featured_at)->not->toBeNull()
-        ->and($profile->featured_sort)->toBe(3);
+    expect($profile->score)->toBe(7000);
 });
 
 it('ignores catalog entries that were deleted while the revision was open', function () {

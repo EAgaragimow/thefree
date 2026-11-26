@@ -36,3 +36,10 @@ it('does not give clients the Profile settings group', function () {
         ->assertOk()
         ->assertDontSee('Profile settings');
 });
+
+it('orders the brand tabs and calls the last one Brand settings', function () {
+    $this->actingAs(User::factory()->client()->create())->get(route('client.dashboard'))
+        ->assertOk()
+        ->assertSeeInOrder(['Dashboard', 'Freelancers', 'Calls', 'Projects', 'Favourites', 'Recommended', 'Brand settings'])
+        ->assertDontSee('Brand profile</');
+});

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Actions\Profiles\GenerateProfileSlug;
 use App\Actions\Profiles\ProfileContent;
 use App\Enums\ProfileStatus;
 use App\Enums\WeeklyHours;
@@ -22,7 +23,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * Timestamps: `created_at` is when the profile was created (account activation),
  * `published_at` is when it was first approved (never reset, and the sole visibility flag),
  * `content_updated_at` is when an approval last changed the live content, and `updated_at`
- * is Eloquent's "row last saved" (it also moves on score or featured edits).
+ * is Eloquent's "row last saved" (it also moves on score edits).
  */
 #[Fillable([
     'photo_path',
@@ -60,6 +61,15 @@ class FreelancerProfile extends Model
     /** How long a new profile counts as a newbie and gets a head start in the directory. */
     public const NEWBIE_MONTHS = 1;
 
+    protected static function booted(): void
+    {
+        static::creating(function (FreelancerProfile $profile): void {
+            if (blank($profile->slug)) {
+                $profile->slug = app(GenerateProfileSlug::class)((string) $profile->user?->name);
+            }
+        });
+    }
+
     /**
      * Get the attributes that should be cast.
      *
@@ -77,7 +87,6 @@ class FreelancerProfile extends Model
             'weekly_hours' => WeeklyHours::class,
             'published_at' => 'datetime',
             'content_updated_at' => 'datetime',
-            'featured_at' => 'datetime',
             'score' => 'integer',
             'is_newbie' => 'boolean',
         ];
@@ -191,11 +200,6 @@ class FreelancerProfile extends Model
     public function scopeForCard(Builder $query): void
     {
         $query->with(['user', 'professionalFunction', 'mainRole', 'skills' => fn ($skills) => $skills->orderBy('name')]);
-    }
-
-    public function isFeatured(): bool
-    {
-        return $this->featured_at !== null;
     }
 
     /**

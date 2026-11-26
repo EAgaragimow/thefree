@@ -35,7 +35,8 @@ it('creates fifty published freelancers with incremental emails and one shared p
         ->and($users->pluck('name')->unique())->toHaveCount(50)
         ->and(Hash::check('freelancer', $users->first()->password))->toBeTrue()
         ->and($users->every(fn (User $user): bool => $user->hasVerifiedEmail()))->toBeTrue()
-        ->and(FreelancerProfile::query()->visible()->count())->toBe(50);
+        ->and(FreelancerProfile::query()->visible()->count())->toBe(50)
+        ->and(FreelancerProfile::query()->pluck('slug')->unique())->toHaveCount(50);
 });
 
 it('makes exactly ten of them newbies and the rest older than a month', function () {

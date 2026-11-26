@@ -47,7 +47,7 @@ it('keeps the recommendations of a free client to cards that ask to upgrade', fu
 
     Livewire::actingAs(User::factory()->client()->create())->test('pages::client.recommended')
         ->assertSee('Right fit')
-        ->assertDontSee(route('directory.show', $profile))
+        ->assertDontSee(route('directory.show', $profile->slug))
         ->assertSeeHtml('data-modal="upgrade"');
 });
 

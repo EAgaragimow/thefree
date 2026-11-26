@@ -76,13 +76,6 @@ it('tops the list up to six with the highest-scoring freelancers', function () {
     expect($names)->toBe(['Match', 'Score 8', 'Score 7', 'Score 6', 'Score 5', 'Score 4']);
 });
 
-it('puts featured freelancers first when it tops up', function () {
-    directoryProfile(['score' => 100], ['name' => 'High score']);
-    directoryProfile(['featured_at' => now(), 'featured_sort' => 1, 'score' => 0], ['name' => 'Featured']);
-
-    expect(previewNames(null))->toBe(['Featured', 'High score']);
-});
-
 it('shows the best freelancers when there is no brand profile or no preferences yet', function () {
     foreach (range(1, 8) as $score) {
         directoryProfile(['score' => $score], ['name' => "Score {$score}"]);

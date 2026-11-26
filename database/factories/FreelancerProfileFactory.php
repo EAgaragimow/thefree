@@ -63,12 +63,4 @@ class FreelancerProfileFactory extends Factory
     {
         return $this->state(fn (array $attributes) => ['is_newbie' => true]);
     }
-
-    public function featured(int $sort = 0): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'featured_at' => now(),
-            'featured_sort' => $sort,
-        ]);
-    }
 }

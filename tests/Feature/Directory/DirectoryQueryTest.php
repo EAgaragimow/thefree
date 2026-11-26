@@ -193,32 +193,6 @@ it('ranks name and title matches above other matches for a search', function () 
     expect(directoryNames(['search' => 'sam']))->toBe(['Sam Smith', 'Title match', 'High score']);
 });
 
-it('lists featured profiles apart from the regular list, in the chosen order', function () {
-    directoryProfile(user: ['name' => 'Second featured'], attributes: ['featured_at' => now(), 'featured_sort' => 2]);
-    directoryProfile(user: ['name' => 'First featured'], attributes: ['featured_at' => now(), 'featured_sort' => 1]);
-    directoryProfile(user: ['name' => 'Regular']);
-
-    $query = app(DirectoryQuery::class);
-
-    expect($query->featured([])->map(fn ($profile) => $profile->user->name)->all())->toBe(['First featured', 'Second featured'])
-        ->and(directoryNames())->toBe(['Regular']);
-});
-
-it('applies filters to the featured block too', function () {
-    directoryProfile(['featured_at' => now(), 'featured_sort' => 1, 'professional_title' => 'Rome guide'], ['name' => 'Roman']);
-    directoryProfile(['featured_at' => now(), 'featured_sort' => 2, 'professional_title' => 'Oslo guide'], ['name' => 'Norwegian']);
-
-    $names = app(DirectoryQuery::class)->featured(['search' => 'rome'])->map(fn ($profile) => $profile->user->name)->all();
-
-    expect($names)->toBe(['Roman']);
-});
-
-it('does not feature a hidden profile', function () {
-    directoryProfile(['featured_at' => now(), 'featured_sort' => 1], ['name' => 'Suspended', 'status' => 'suspended']);
-
-    expect(app(DirectoryQuery::class)->featured([]))->toHaveCount(0);
-});
-
 it('pages the list', function () {
     FreelancerProfile::factory()->published()->count(DirectoryQuery::PER_PAGE + 1)->create();
 
@@ -244,13 +218,4 @@ it('wires the page filters to the directory query', function () {
         ->assertSee('Austin freelancer')
         ->set('search', 'nobody-has-this')
         ->assertSee('No freelancers found');
-});
-
-it('shows featured freelancers in their own block on the first page', function () {
-    directoryProfile(['featured_at' => now(), 'featured_sort' => 1], ['name' => 'Starred']);
-    directoryProfile(user: ['name' => 'Ordinary']);
-
-    Livewire::actingAs(User::factory()->client()->paid()->create())
-        ->test('pages::directory.index')
-        ->assertSeeInOrder(['Featured', 'Starred', 'All freelancers', 'Ordinary']);
 });

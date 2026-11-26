@@ -25,7 +25,7 @@ it('lets a paid client save a freelancer from the profile page', function () {
     $client = User::factory()->client()->paid()->create();
     $profile = directoryProfile();
 
-    Livewire::actingAs($client)->test('pages::directory.show', ['profile' => $profile->id])
+    Livewire::actingAs($client)->test('pages::directory.show', ['profile' => $profile->slug])
         ->assertSee('Save to favorites')
         ->call('toggleFavorite', $profile->id)
         ->assertSee('Saved to favorites');
@@ -79,7 +79,7 @@ it('lists favourites with links for a paid client', function () {
     Livewire::actingAs($client)->test('pages::client.favorites')
         ->assertSee('Favourites')
         ->assertSee('Grace Hopper')
-        ->assertSee(route('directory.show', $profile));
+        ->assertSee(route('directory.show', $profile->slug));
 });
 
 it('keeps listing favourites after a lapse, without links', function () {
@@ -92,7 +92,7 @@ it('keeps listing favourites after a lapse, without links', function () {
     Livewire::actingAs($client)->test('pages::client.favorites')
         ->assertSee('Favourites')
         ->assertSee('Grace Hopper')
-        ->assertDontSee(route('directory.show', $profile))
+        ->assertDontSee(route('directory.show', $profile->slug))
         ->assertSee('Upgrade to the Paid Plan');
 
     expect($client->favoriteFreelancers()->count())->toBe(1);
@@ -142,7 +142,7 @@ it('asks a free client to upgrade when they click a recommendation', function ()
 
     Livewire::actingAs(User::factory()->client()->create())->test('pages::client.recommended')
         ->assertSee('Right fit')
-        ->assertDontSee(route('directory.show', $profile))
+        ->assertDontSee(route('directory.show', $profile->slug))
         ->assertSeeHtml('data-modal="upgrade"');
 });
 

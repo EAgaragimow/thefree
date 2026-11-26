@@ -14,11 +14,11 @@ new #[Title('Freelancer profile')] class extends Component {
      * Full profiles are for Paid clients, freelancers and admins; a Free client is turned away
      * here even if they know the address. Profiles that are not live do not exist for anyone.
      */
-    public function mount(int $profile): void
+    public function mount(string $profile): void
     {
         Gate::authorize('view-full-freelancer-profile');
 
-        $this->profileId = FreelancerProfile::query()->visible()->findOrFail($profile)->id;
+        $this->profileId = FreelancerProfile::query()->visible()->where('slug', $profile)->firstOrFail()->id;
     }
 
     public function profile(): FreelancerProfile

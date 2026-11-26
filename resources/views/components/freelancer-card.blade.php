@@ -53,9 +53,6 @@
     </div>
 
     <div class="flex flex-wrap gap-1.5">
-        @if ($profile->isFeatured())
-            <flux:badge color="amber" size="sm">Featured</flux:badge>
-        @endif
         @if ($profile->is_newbie)
             <flux:badge color="sky" size="sm">Newbie</flux:badge>
         @endif

@@ -13,7 +13,7 @@ use Illuminate\Support\Str;
 /**
  * The freelancer-editable content of a profile: what a revision's payload stores and what
  * an approval writes to the live profile. Admin- and system-controlled columns (score,
- * featured_*, published_at) are deliberately not part of it.
+ * published_at) are deliberately not part of it.
  *
  * Highlights and services are ordered lists. Each item has a `uid` that is stable within a revision
  * and an `id` that points at the live row it was copied from (null for items that are new), so
