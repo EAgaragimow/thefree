@@ -158,7 +158,6 @@ Free and Paid are configured independently (different length, days, and hours). 
 - Search by name, profession, skills, and keywords.
 - Filters/sorting for function, roles, skills, tools, industries, hourly rate, hours per week, location, time zone, review/rating, and consultation availability.
 - **Favorites / Saved Freelancers** for eligible Clients.
-- **Featured Freelancers**, managed by Admin.
 - Ranking/recommendations may use the unified Freelancer score defined in §11, alongside search relevance.
 
 ### Blog / Resources
@@ -362,7 +361,7 @@ Admin has broad operational and system permissions, including:
 - Manual review approval/rejection, investigation of private reports, disputes, and sanctions.
 - View/manage projects, proposals, consultations, cancellations, and exceptional situations.
 - Monitor Stripe-related payment/subscription states; perform **provider-supported** payment corrections/refunds.
-- Manage the functions, roles, skills, tools and industries lists, featured freelancers, content/Blog, and relevant platform settings.
+- Manage the functions, roles, skills, tools and industries lists, content/Blog, and relevant platform settings.
 - Manage rating-point adjustments and booking-request expiration policy (default: **1 hour**).
 - Maintain **Audit Logs** for sensitive Admin actions, including actor, action, subject, time, and reason.
 
@@ -388,7 +387,7 @@ Full System Control means broad authorized **application** administration, not b
 
 **Freelancer:** profile/review status, Highlights, Services, incoming requests/proposals, active projects, Call Requests, Calls (list/calendar), availability, connected calendars, messages, earnings/payment history, reviews/score, and private reports.
 
-**Admin:** users, applications, profile/review moderation, reports/disputes, projects, consultations, payment/subscription monitoring, catalog lists (functions, roles, skills, tools, industries), featured users, content, settings, audit logs.
+**Admin:** users, applications, profile/review moderation, reports/disputes, projects, consultations, payment/subscription monitoring, catalog lists (functions, roles, skills, tools, industries), content, settings, audit logs.
 
 ### UX standards
 
@@ -413,7 +412,7 @@ The **full scope above is required in the final product**. These phases define d
 ### Phase 2 — Marketplace & Subscriptions
 
 - Freelancer profile content, Highlights modal galleries, Services and consultation listings.
-- Authenticated Freelancer directory, search/filters, ranking display, Favorites, and Featured Freelancers.
+- Authenticated Freelancer directory, search/filters, ranking display, and Favorites.
 - Blog/Resources with free previews and paid full content.
 - Stripe recurring Monthly/Yearly subscriptions, Free/Paid/payment-restricted access rules, upgrade prompts, billing history, and recovery.
 
