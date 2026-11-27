@@ -9,7 +9,8 @@ use DomainException;
 class UnpublishBlogPost
 {
     /**
-     * Take an article back to draft; clients stop seeing it at once.
+     * Take an article back to draft; clients stop seeing it at once. Edits that were still waiting
+     * to be published become the article's content, since a draft has no separate pending version.
      *
      * @throws DomainException
      */
@@ -19,6 +20,10 @@ class UnpublishBlogPost
             throw new DomainException('The article is not published.');
         }
 
-        $post->forceFill(['status' => BlogPostStatus::Draft])->save();
+        $post->forceFill([
+            ...($post->draft ?? []),
+            'status' => BlogPostStatus::Draft,
+            'draft' => null,
+        ])->save();
     }
 }
