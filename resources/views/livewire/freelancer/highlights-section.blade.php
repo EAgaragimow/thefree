@@ -6,15 +6,17 @@ use App\Actions\Profiles\VideoEmbed;
 use App\Enums\ProfileStatus;
 use App\Models\FreelancerProfile;
 use Flux\Flux;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
-use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\WithPagination;
+use Livewire\WithoutUrlPagination;
 use Livewire\WithFileUploads;
 
-new #[Title('Highlights')] class extends Component {
-    use WithFileUploads;
+new class extends Component {
+    use WithFileUploads, WithPagination, WithoutUrlPagination;
 
     #[Locked]
     public int $profileId = 0;
@@ -65,6 +67,26 @@ new #[Title('Highlights')] class extends Component {
     public function highlights(): array
     {
         return $this->profile()->workingContent()->highlights();
+    }
+
+    public const PER_PAGE = 12;
+
+    /**
+     * One page of the list. The page lives in the component only: it is not in the URL and is not
+     * remembered, so a reload starts again from the first page.
+     */
+    public function paginated(): LengthAwarePaginator
+    {
+        $items = $this->highlights();
+        $lastPage = max(1, (int) ceil(count($items) / self::PER_PAGE));
+        $page = min($this->getPage(), $lastPage);
+
+        return new LengthAwarePaginator(
+            array_slice($items, ($page - 1) * self::PER_PAGE, self::PER_PAGE),
+            count($items),
+            self::PER_PAGE,
+            $page,
+        );
     }
 
     public function isLocked(): bool
@@ -261,7 +283,8 @@ new #[Title('Highlights')] class extends Component {
         abort_if($moved === null, 404);
 
         $others = array_values(array_filter($highlights, fn (array $highlight): bool => $highlight['uid'] !== $uid));
-        array_splice($others, max(0, min($position, count($others))), 0, [$moved]);
+        $offset = ($this->getPage() - 1) * self::PER_PAGE;
+        array_splice($others, max(0, min($offset + $position, count($others))), 0, [$moved]);
 
         $this->persist($update, $others);
     }
@@ -290,31 +313,22 @@ new #[Title('Highlights')] class extends Component {
     }
 };
 ?>
-
-<div class="mx-auto w-full max-w-3xl space-y-6">
-    <div class="flex items-start justify-between gap-4">
-        <div>
-            <flux:heading size="xl" level="1">Highlights</flux:heading>
-            <flux:text class="mt-1">Showcase your best work. Clients open each highlight in a pop-up with its full description, images, videos and links.</flux:text>
-        </div>
-
+<x-site.section id="highlights" heading="Highlights" :count="count($this->highlights())">
+    <x-slot:actions>
         @unless ($this->isLocked())
-            <flux:button variant="primary" icon="plus" wire:click="startCreating">Add highlight</flux:button>
+            <flux:button size="sm" variant="primary" icon="plus" wire:click="startCreating">Add highlight</flux:button>
         @endunless
-    </div>
+    </x-slot:actions>
 
-    <livewire:profile-revision-bar />
+    <flux:text class="mb-6">Showcase your best work. Clients open each highlight in a pop-up with its full description, images, videos and links.</flux:text>
 
-    @php($highlights = $this->highlights())
+    @php($paginator = $this->paginated())
 
-    @if ($highlights === [])
-        <flux:card>
-            <flux:heading>No highlights yet</flux:heading>
-            <flux:text class="mt-1">Add a highlight to show clients what you have done.</flux:text>
-        </flux:card>
+    @if ($paginator->total() === 0)
+        <x-site.empty title="No highlights yet." text="Add a highlight to show clients what you have done." />
     @else
         <ul wire:sort="sort" class="space-y-3">
-            @foreach ($highlights as $highlight)
+            @foreach ($paginator as $highlight)
                 <li wire:key="highlight-{{ $highlight['uid'] }}" wire:sort:item="{{ $highlight['uid'] }}">
                     <flux:card class="flex items-start gap-4">
                         <div wire:sort:handle class="mt-1 cursor-grab text-zinc-400" title="Drag to reorder" aria-hidden="true">
@@ -351,6 +365,10 @@ new #[Title('Highlights')] class extends Component {
                 </li>
             @endforeach
         </ul>
+
+        @if ($paginator->hasPages())
+            <flux:pagination :paginator="$paginator" class="mt-6" />
+        @endif
     @endif
 
     <flux:modal name="highlight-form" class="md:w-[42rem]">
@@ -467,4 +485,4 @@ new #[Title('Highlights')] class extends Component {
             </div>
         </form>
     </flux:modal>
-</div>
+</x-site.section>

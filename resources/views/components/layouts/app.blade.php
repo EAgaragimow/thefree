@@ -1,26 +1,29 @@
 @props(['title' => null])
 
 {{--
-    The signed-in pages of brands and freelancers. Their areas have a tab bar under the header; other
-    pages (directory, blog, messages, settings) have none.
+    The signed-in pages of brands and freelancers. Only the two dashboards have a tab bar: it is sticky
+    and its items are anchors to the sections of the dashboard.
 --}}
 @php
     $user = auth()->user();
 
     $tabs = match (true) {
-        $user?->isClient() && request()->routeIs('client.*') => [
-            ['label' => 'Overview', 'href' => route('client.dashboard'), 'current' => request()->routeIs('client.dashboard')],
-            ['label' => 'Calls', 'href' => route('client.calls'), 'current' => request()->routeIs('client.calls')],
-            ['label' => 'Projects', 'href' => route('client.projects'), 'current' => request()->routeIs('client.projects')],
-            ['label' => 'Favourites', 'href' => route('client.favorites'), 'current' => request()->routeIs('client.favorites')],
-            ['label' => 'Recommended', 'href' => route('client.recommended'), 'current' => request()->routeIs('client.recommended')],
+        $user?->isClient() && request()->routeIs('client.dashboard') => [
+            ['label' => 'Overview', 'href' => '#overview'],
+            ['label' => 'Calls', 'href' => '#calls'],
+            ['label' => 'Projects', 'href' => '#projects'],
+            ['label' => 'Messages', 'href' => '#messages'],
         ],
-        $user?->isFreelancer() && request()->routeIs('freelancer.*') && ! request()->routeIs('freelancer.preview') => [
-            ['label' => 'Overview', 'href' => route('freelancer.dashboard'), 'current' => request()->routeIs('freelancer.dashboard')],
-            ['label' => 'My profile', 'href' => route('freelancer.profile'), 'current' => request()->routeIs('freelancer.profile')],
-            ['label' => 'Highlights', 'href' => route('freelancer.highlights'), 'current' => request()->routeIs('freelancer.highlights')],
-            ['label' => 'Services', 'href' => route('freelancer.services'), 'current' => request()->routeIs('freelancer.services')],
-            ['label' => 'Consultations', 'href' => route('freelancer.consultations'), 'current' => request()->routeIs('freelancer.consultations')],
+        $user?->isFreelancer() && request()->routeIs('freelancer.dashboard') => [
+            ['label' => 'Overview', 'href' => '#overview'],
+            ['label' => 'Messages', 'href' => '#messages'],
+            ['label' => 'Requests', 'href' => '#requests'],
+            ['label' => 'Calls', 'href' => '#calls'],
+            ['label' => 'Projects', 'href' => '#projects'],
+            ['label' => 'Highlights', 'href' => '#highlights'],
+            ['label' => 'Services', 'href' => '#services'],
+            ['label' => 'Work history', 'href' => '#work-history'],
+            ['label' => 'Consultations', 'href' => '#consultations'],
         ],
         default => null,
     };

@@ -33,7 +33,7 @@ new #[Title('Dashboard')] class extends Component {
 ?>
 
 <div class="space-y-4">
-    <x-site.section class="space-y-6">
+    <x-site.section id="overview" class="space-y-6">
         <div>
             <flux:heading size="xl" level="1">Welcome, {{ auth()->user()->name }}</flux:heading>
             <flux:text class="mt-1">Your {{ $this->isFreePlan() ? 'Free' : 'Paid' }} client dashboard.</flux:text>
@@ -128,12 +128,16 @@ new #[Title('Dashboard')] class extends Component {
         </x-site.section>
     @endif
 
-    {{-- The first six calls and projects will be listed here, three to a row, once they exist. --}}
-    <x-site.section heading="Calls" :count="0" :href="route('client.calls')">
+    {{-- Calls, Projects and Messages are listed here once they exist: 12 cards per page for calls and projects, the 12 latest conversations for messages. --}}
+    <x-site.section id="calls" heading="Calls" :count="0">
         <x-site.empty title="No calls to show." text="Scheduled consultations and past calls will appear here." />
     </x-site.section>
 
-    <x-site.section heading="Projects" :count="0" :href="route('client.projects')">
+    <x-site.section id="projects" heading="Projects" :count="0">
         <x-site.empty title="No projects yet." text="Your projects will appear here as they progress." />
+    </x-site.section>
+
+    <x-site.section id="messages" heading="Messages" :count="0" :href="route('messages.index')">
+        <x-site.empty title="No messages to show." text="Your latest conversations will appear here." />
     </x-site.section>
 </div>

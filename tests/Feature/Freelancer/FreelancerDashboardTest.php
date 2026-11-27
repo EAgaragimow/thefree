@@ -34,7 +34,7 @@ it('does not tag an established freelancer', function () {
         ->assertDontSee('Newbie');
 });
 
-it('groups highlights, services, work history and consultations with a link to each settings page', function () {
+it('lists highlights, services, work history and consultations as separate sections', function () {
     $profile = FreelancerProfile::factory()->published()->create();
     Highlight::factory()->create(['freelancer_profile_id' => $profile->id, 'title' => 'Skincare relaunch']);
     Service::factory()->create(['freelancer_profile_id' => $profile->id, 'title' => 'Channel audit', 'price_cents' => 75000]);
@@ -43,29 +43,52 @@ it('groups highlights, services, work history and consultations with a link to e
 
     Livewire::actingAs($profile->user)->test('pages::freelancer.dashboard')
         ->assertSeeInOrder(['Highlights', 'Skincare relaunch', 'Services', 'Channel audit', '$750.00', 'Work history', 'Growth Marketer · Northwind Studio', 'Consultations', 'Free consultation', '20 minutes'])
-        ->assertDontSee('No items yet.')
-        ->assertDontSee('Go to settings')
-        ->assertSeeHtml('href="'.route('freelancer.highlights').'"')
-        ->assertSeeHtml('href="'.route('freelancer.services').'"')
-        ->assertSeeHtml('href="'.route('freelancer.profile').'"')
-        ->assertSeeHtml('href="'.route('freelancer.consultations').'"');
-});
-
-it('says there are no items yet when a group is empty, without an extra call to action', function () {
-    $profile = FreelancerProfile::factory()->published()->create();
-
-    Livewire::actingAs($profile->user)->test('pages::freelancer.dashboard')
-        ->assertSee('No items yet.', 4)
+        ->assertSeeHtml('id="highlights"')
+        ->assertSeeHtml('id="services"')
+        ->assertSeeHtml('id="work-history"')
+        ->assertSeeHtml('id="consultations"')
+        ->assertDontSee('No highlights yet.')
         ->assertDontSee('Go to settings');
 });
 
-it('leaves out a consultation that is switched off', function () {
+it('says so when a section has nothing in it yet', function () {
+    $profile = FreelancerProfile::factory()->published()->create();
+
+    Livewire::actingAs($profile->user)->test('pages::freelancer.dashboard')
+        ->assertSee('No highlights yet.')
+        ->assertSee('No services yet.')
+        ->assertSee('No work history yet.')
+        ->assertDontSee('Go to settings');
+});
+
+it('shows a consultation that is switched off as not offered', function () {
     $profile = FreelancerProfile::factory()->published()->create();
     ConsultationOffer::factory()->free()->disabled()->create(['freelancer_profile_id' => $profile->id]);
 
     Livewire::actingAs($profile->user)->test('pages::freelancer.dashboard')
-        ->assertDontSee('Free consultation')
-        ->assertSee('No items yet.', 4);
+        ->assertSee('Free consultation')
+        ->assertSee('Not offered');
+});
+
+it('has an anchor for every section of the tab bar', function () {
+    $profile = FreelancerProfile::factory()->published()->create();
+
+    $response = $this->actingAs($profile->user)->get(route('freelancer.dashboard'))->assertOk();
+
+    foreach (['overview', 'messages', 'requests', 'calls', 'projects', 'highlights', 'services', 'work-history', 'consultations'] as $anchor) {
+        $response->assertSeeHtml('href="#'.$anchor.'"')->assertSeeHtml('id="'.$anchor.'"');
+    }
+
+    $response->assertSeeInOrder(['Overview', 'Messages', 'Requests', 'Calls', 'Projects', 'Highlights', 'Services', 'Work history', 'Consultations'])
+        ->assertSeeHtml('sticky top-0');
+});
+
+it('has no separate pages for highlights, services and consultations', function () {
+    $profile = FreelancerProfile::factory()->published()->create();
+
+    foreach (['highlights', 'services', 'consultations'] as $page) {
+        $this->actingAs($profile->user)->get('/freelancer/'.$page)->assertNotFound();
+    }
 });
 
 it('shows pending changes rather than the live items', function () {
@@ -86,7 +109,8 @@ it('lists requests, calls and projects above the profile groups', function () {
     $profile = FreelancerProfile::factory()->published()->create();
 
     Livewire::actingAs($profile->user)->test('pages::freelancer.dashboard')
-        ->assertSeeInOrder(['Requests', 'Calls', 'Projects', 'Highlights', 'Services', 'Work history', 'Consultations'])
+        ->assertSeeInOrder(['Messages', 'Requests', 'Calls', 'Projects', 'Highlights', 'Services', 'Work history', 'Consultations'])
+        ->assertSee('No messages to show.')
         ->assertSee('No call requests to show.')
         ->assertSee('No calls to show.')
         ->assertSee('No projects yet.')

@@ -6,13 +6,17 @@ use App\Enums\PricingMode;
 use App\Enums\ProfileStatus;
 use App\Models\FreelancerProfile;
 use Flux\Flux;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
-use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\WithPagination;
+use Livewire\WithoutUrlPagination;
 
-new #[Title('Services')] class extends Component {
+new class extends Component {
+    use WithPagination, WithoutUrlPagination;
+
     #[Locked]
     public int $profileId = 0;
 
@@ -50,6 +54,26 @@ new #[Title('Services')] class extends Component {
     public function services(): array
     {
         return $this->profile()->workingContent()->services();
+    }
+
+    public const PER_PAGE = 12;
+
+    /**
+     * One page of the list. The page lives in the component only: it is not in the URL and is not
+     * remembered, so a reload starts again from the first page.
+     */
+    public function paginated(): LengthAwarePaginator
+    {
+        $items = $this->services();
+        $lastPage = max(1, (int) ceil(count($items) / self::PER_PAGE));
+        $page = min($this->getPage(), $lastPage);
+
+        return new LengthAwarePaginator(
+            array_slice($items, ($page - 1) * self::PER_PAGE, self::PER_PAGE),
+            count($items),
+            self::PER_PAGE,
+            $page,
+        );
     }
 
     public function isLocked(): bool
@@ -167,7 +191,8 @@ new #[Title('Services')] class extends Component {
         abort_if($moved === null, 404);
 
         $others = array_values(array_filter($services, fn (array $service): bool => $service['uid'] !== $uid));
-        array_splice($others, max(0, min($position, count($others))), 0, [$moved]);
+        $offset = ($this->getPage() - 1) * self::PER_PAGE;
+        array_splice($others, max(0, min($offset + $position, count($others))), 0, [$moved]);
 
         $this->persist($update, $others);
     }
@@ -202,31 +227,22 @@ new #[Title('Services')] class extends Component {
     }
 };
 ?>
-
-<div class="mx-auto w-full max-w-3xl space-y-6">
-    <div class="flex items-start justify-between gap-4">
-        <div>
-            <flux:heading size="xl" level="1">Services</flux:heading>
-            <flux:text class="mt-1">Describe the work you offer, up to {{ ProfileContent::MAX_SERVICES }} services. Clients never buy a service directly: they send you a request, and you agree on scope, price and deadline together.</flux:text>
-        </div>
-
+<x-site.section id="services" heading="Services" :count="count($this->services())">
+    <x-slot:actions>
         @unless ($this->isLocked() || count($this->services()) >= ProfileContent::MAX_SERVICES)
-            <flux:button variant="primary" icon="plus" wire:click="startCreating">Add service</flux:button>
+            <flux:button size="sm" variant="primary" icon="plus" wire:click="startCreating">Add service</flux:button>
         @endunless
-    </div>
+    </x-slot:actions>
 
-    <livewire:profile-revision-bar />
+    <flux:text class="mb-6">Describe the work you offer, up to {{ ProfileContent::MAX_SERVICES }} services. Clients never buy a service directly: they send you a request, and you agree on scope, price and deadline together.</flux:text>
 
-    @php($services = $this->services())
+    @php($paginator = $this->paginated())
 
-    @if ($services === [])
-        <flux:card>
-            <flux:heading>No services yet</flux:heading>
-            <flux:text class="mt-1">Add the services you want clients to request from you.</flux:text>
-        </flux:card>
+    @if ($paginator->total() === 0)
+        <x-site.empty title="No services yet." text="Add the services you want clients to request from you." />
     @else
         <ul wire:sort="sort" class="space-y-3">
-            @foreach ($services as $service)
+            @foreach ($paginator as $service)
                 <li wire:key="service-{{ $service['uid'] }}" wire:sort:item="{{ $service['uid'] }}">
                     <flux:card class="flex items-start gap-4">
                         <div wire:sort:handle class="mt-1 cursor-grab text-zinc-400" title="Drag to reorder" aria-hidden="true">
@@ -254,6 +270,10 @@ new #[Title('Services')] class extends Component {
                 </li>
             @endforeach
         </ul>
+
+        @if ($paginator->hasPages())
+            <flux:pagination :paginator="$paginator" class="mt-6" />
+        @endif
     @endif
 
     <flux:modal name="service-form" class="md:w-[34rem]">
@@ -298,4 +318,4 @@ new #[Title('Services')] class extends Component {
             </div>
         </form>
     </flux:modal>
-</div>
+</x-site.section>

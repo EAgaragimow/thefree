@@ -75,9 +75,6 @@ new #[Title('My profile')] class extends Component {
 
     public string $best_fit_3 = '';
 
-    /** @var list<array{company: string, role: string, started_at: string, ended_at: string, description: string}> */
-    public array $experiences = [];
-
     public $photo = null;
 
     public ?string $photo_path = null;
@@ -122,13 +119,6 @@ new #[Title('My profile')] class extends Component {
         $this->weekly_hours = (string) $content->get('weekly_hours');
         $this->open_to_full_time = $this->yesNo($content->get('open_to_full_time'));
         [$this->best_fit_1, $this->best_fit_2, $this->best_fit_3] = array_pad($content->get('best_fit'), 3, '');
-        $this->experiences = array_map(fn (array $experience): array => [
-            'company' => $experience['company'],
-            'role' => $experience['role'],
-            'started_at' => $experience['started_at'],
-            'ended_at' => (string) $experience['ended_at'],
-            'description' => (string) $experience['description'],
-        ], $content->experiences());
     }
 
     private function dollars(?int $cents): string
@@ -156,23 +146,6 @@ new #[Title('My profile')] class extends Component {
             ->with('openRevision')
             ->where('user_id', auth()->id())
             ->findOrFail($this->profileId);
-    }
-
-    public function addExperience(): void
-    {
-        $this->experiences[] = [
-            'company' => '',
-            'role' => '',
-            'started_at' => '',
-            'ended_at' => '',
-            'description' => '',
-        ];
-    }
-
-    public function removeExperience(int $index): void
-    {
-        unset($this->experiences[$index]);
-        $this->experiences = array_values($this->experiences);
     }
 
     public function save(SaveFreelancerProfile $save): void
@@ -246,12 +219,6 @@ new #[Title('My profile')] class extends Component {
             'best_fit_1' => ['nullable', 'string', 'max:'.ProfileContent::MAX_BEST_FIT_LENGTH],
             'best_fit_2' => ['nullable', 'string', 'max:'.ProfileContent::MAX_BEST_FIT_LENGTH],
             'best_fit_3' => ['nullable', 'string', 'max:'.ProfileContent::MAX_BEST_FIT_LENGTH],
-            'experiences' => ['array', 'max:20'],
-            'experiences.*.company' => ['required', 'string', 'max:255'],
-            'experiences.*.role' => ['required', 'string', 'max:255'],
-            'experiences.*.started_at' => ['required', 'date'],
-            'experiences.*.ended_at' => ['nullable', 'date'],
-            'experiences.*.description' => ['nullable', 'string', 'max:2000'],
         ], [
             'hourly_rate.regex' => 'Use a rate with at most two decimals, for example 85 or 99.50.',
             'monthly_retainers_from.regex' => 'Use a price with at most two decimals, for example 2500 or 99.50.',
@@ -300,7 +267,7 @@ new #[Title('My profile')] class extends Component {
                 },
                 'best_fit' => [$validated['best_fit_1'] ?? '', $validated['best_fit_2'] ?? '', $validated['best_fit_3'] ?? ''],
             ],
-            $validated['experiences'],
+            $profile->workingContent()->experiences(),
         );
 
         $this->photo = null;
@@ -596,53 +563,6 @@ new #[Title('My profile')] class extends Component {
                     <flux:input wire:model="best_fit_3" placeholder="Ex: Companies in the personal care industry" />
                     <flux:error name="best_fit_3" />
                 </flux:field>
-            </section>
-
-            <section class="space-y-4">
-                <div class="flex items-center justify-between">
-                    <flux:heading size="lg">Work history</flux:heading>
-                    <flux:button type="button" size="sm" icon="plus" wire:click="addExperience">Add</flux:button>
-                </div>
-
-                @forelse ($experiences as $index => $experience)
-                    <flux:card wire:key="experience-{{ $index }}" class="space-y-4">
-                        <div class="grid gap-4 sm:grid-cols-2">
-                            <flux:field>
-                                <flux:label>Company *</flux:label>
-                                <flux:input wire:model="experiences.{{ $index }}.company" />
-                                <flux:error name="experiences.{{ $index }}.company" />
-                            </flux:field>
-
-                            <flux:field>
-                                <flux:label>Role *</flux:label>
-                                <flux:input wire:model="experiences.{{ $index }}.role" />
-                                <flux:error name="experiences.{{ $index }}.role" />
-                            </flux:field>
-
-                            <flux:field>
-                                <flux:label>Start date *</flux:label>
-                                <flux:input type="date" wire:model="experiences.{{ $index }}.started_at" />
-                                <flux:error name="experiences.{{ $index }}.started_at" />
-                            </flux:field>
-
-                            <flux:field>
-                                <flux:label>End date</flux:label>
-                                <flux:input type="date" wire:model="experiences.{{ $index }}.ended_at" />
-                                <flux:error name="experiences.{{ $index }}.ended_at" />
-                            </flux:field>
-                        </div>
-
-                        <flux:field>
-                            <flux:label>Description</flux:label>
-                            <flux:textarea wire:model="experiences.{{ $index }}.description" rows="2" />
-                            <flux:error name="experiences.{{ $index }}.description" />
-                        </flux:field>
-
-                        <flux:button type="button" size="sm" variant="danger" wire:click="removeExperience({{ $index }})">Remove</flux:button>
-                    </flux:card>
-                @empty
-                    <flux:text>No work history added yet.</flux:text>
-                @endforelse
             </section>
 
             <section class="space-y-4">

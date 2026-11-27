@@ -40,9 +40,7 @@ function pageFreelancer(bool $published = true, ?ProfileStatus $revision = null)
 }
 
 dataset('offering pages', [
-    'highlights' => ['freelancer.highlights'],
-    'services' => ['freelancer.services'],
-    'consultations' => ['freelancer.consultations'],
+    'dashboard' => ['freelancer.dashboard'],
     'preview' => ['freelancer.preview'],
 ]);
 
@@ -58,9 +56,15 @@ it('shows a freelancer each offering page', function (string $route) {
     $this->actingAs($user)->get(route($route))->assertOk();
 })->with('offering pages');
 
-it('returns 404 when a freelancer has no profile', function (string $route) {
-    $this->actingAs(User::factory()->freelancer()->create())->get(route($route))->assertNotFound();
-})->with('offering pages');
+it('returns 404 for the preview when a freelancer has no profile', function () {
+    $this->actingAs(User::factory()->freelancer()->create())->get(route('freelancer.preview'))->assertNotFound();
+});
+
+it('keeps the sections off the dashboard of a freelancer without a profile', function () {
+    $this->actingAs(User::factory()->freelancer()->create())->get(route('freelancer.dashboard'))
+        ->assertOk()
+        ->assertDontSeeHtml('id="highlights"');
+});
 
 // Services -----------------------------------------------------------------------------------
 
@@ -68,7 +72,7 @@ it('adds a fixed price service to a draft revision and leaves the live profile a
     [$user, $profile] = pageFreelancer();
 
     Livewire::actingAs($user)
-        ->test('pages::freelancer.services')
+        ->test('freelancer.services-section')
         ->call('startCreating')
         ->set('title', 'Brand identity')
         ->set('description', 'Logo, colours and guidelines.')
@@ -90,7 +94,7 @@ it('stores a price with cents exactly', function () {
     [$user, $profile] = pageFreelancer();
 
     Livewire::actingAs($user)
-        ->test('pages::freelancer.services')
+        ->test('freelancer.services-section')
         ->set('title', 'Audit')
         ->set('pricing_mode', 'starting-from')
         ->set('price', '99.50')
@@ -104,7 +108,7 @@ it('does not ask for a price on a custom quote', function () {
     [$user, $profile] = pageFreelancer();
 
     Livewire::actingAs($user)
-        ->test('pages::freelancer.services')
+        ->test('freelancer.services-section')
         ->set('title', 'Strategy')
         ->set('pricing_mode', 'custom-quote')
         ->set('price', '500')
@@ -117,7 +121,7 @@ it('does not ask for a price on a custom quote', function () {
 it('validates a service', function (array $input, string|array $errors) {
     [$user] = pageFreelancer();
 
-    $component = Livewire::actingAs($user)->test('pages::freelancer.services');
+    $component = Livewire::actingAs($user)->test('freelancer.services-section');
 
     foreach ($input as $key => $value) {
         $component->set($key, $value);
@@ -139,7 +143,7 @@ it('accepts a service title of exactly 80 characters and a description of exactl
     [$user, $profile] = pageFreelancer();
 
     Livewire::actingAs($user)
-        ->test('pages::freelancer.services')
+        ->test('freelancer.services-section')
         ->set('title', str_repeat('t', 80))
         ->set('description', str_repeat('d', 200))
         ->set('pricing_mode', 'custom-quote')
@@ -155,7 +159,7 @@ it('edits a service keeping its identity', function () {
     $uid = "live-{$service->id}";
 
     Livewire::actingAs($user)
-        ->test('pages::freelancer.services')
+        ->test('freelancer.services-section')
         ->call('startEditing', $uid)
         ->assertSet('title', 'Old')
         ->assertSet('price', '100.00')
@@ -177,7 +181,7 @@ it('removes and reorders services', function () {
     $third = Service::factory()->for($profile, 'profile')->create(['title' => 'Third', 'sort_order' => 2]);
 
     $component = Livewire::actingAs($user)
-        ->test('pages::freelancer.services')
+        ->test('freelancer.services-section')
         ->call('sort', "live-{$third->id}", 0);
 
     expect(array_column($profile->refresh()->openRevision->content()->services(), 'title'))->toBe(['Third', 'First', 'Second']);
@@ -193,12 +197,12 @@ it('cannot edit or reorder a service that is not in the freelancers own profile'
     $foreign = Service::factory()->for($other, 'profile')->create();
 
     Livewire::actingAs($user)
-        ->test('pages::freelancer.services')
+        ->test('freelancer.services-section')
         ->call('startEditing', "live-{$foreign->id}")
         ->assertNotFound();
 
     Livewire::actingAs($user)
-        ->test('pages::freelancer.services')
+        ->test('freelancer.services-section')
         ->call('sort', "live-{$foreign->id}", 0)
         ->assertNotFound();
 });
@@ -207,8 +211,7 @@ it('refuses to change services while the profile is under review', function () {
     [$user, $profile] = pageFreelancer(true, ProfileStatus::PendingReview);
 
     Livewire::actingAs($user)
-        ->test('pages::freelancer.services')
-        ->assertSee('Your profile is under review')
+        ->test('freelancer.services-section')
         ->assertDontSeeHtml('wire:click="startCreating"')
         ->set('title', 'Sneaky')
         ->set('pricing_mode', 'custom-quote')
@@ -225,7 +228,7 @@ it('limits how many services can be listed', function () {
     $revision->forceFill(['payload' => $revision->content()->with(['services' => $items])->toArray()])->save();
 
     Livewire::actingAs($user)
-        ->test('pages::freelancer.services')
+        ->test('freelancer.services-section')
         ->set('title', 'One too many')
         ->set('pricing_mode', 'custom-quote')
         ->call('save')
@@ -240,7 +243,7 @@ it('hides the add button once three services are listed', function () {
     $revision = app(OpenProfileRevision::class)($profile);
     $revision->forceFill(['payload' => $revision->content()->with(['services' => $items])->toArray()])->save();
 
-    Livewire::actingAs($user)->test('pages::freelancer.services')->assertDontSeeHtml('wire:click="startCreating"');
+    Livewire::actingAs($user)->test('freelancer.services-section')->assertDontSeeHtml('wire:click="startCreating"');
 });
 
 // Consultations ------------------------------------------------------------------------------
@@ -263,7 +266,7 @@ it('always lists one free and one paid consultation that cannot be added or remo
     [$user] = pageFreelancer();
 
     Livewire::actingAs($user)
-        ->test('pages::freelancer.consultations')
+        ->test('freelancer.consultations-section')
         ->assertSee('Free consultation')
         ->assertSee('Paid consultation')
         ->assertSee('Not offered')
@@ -274,7 +277,7 @@ it('always lists one free and one paid consultation that cannot be added or remo
 it('configures the free consultation', function () {
     [$user, $profile] = pageFreelancer();
 
-    $component = Livewire::actingAs($user)->test('pages::freelancer.consultations');
+    $component = Livewire::actingAs($user)->test('freelancer.consultations-section');
     configureConsultation($component, 'free', ['mon', 'wed']);
 
     $component->set('duration_minutes', '20')
@@ -299,7 +302,7 @@ it('configures the free consultation', function () {
 it('configures the paid consultation with a price', function () {
     [$user, $profile] = pageFreelancer();
 
-    $component = Livewire::actingAs($user)->test('pages::freelancer.consultations');
+    $component = Livewire::actingAs($user)->test('freelancer.consultations-section');
     configureConsultation($component, 'paid', ['sat']);
 
     $component->set('duration_minutes', '60')
@@ -324,7 +327,7 @@ it('shows the schedule in 24-hour time', function () {
     ]);
 
     Livewire::actingAs($user)
-        ->test('pages::freelancer.consultations')
+        ->test('freelancer.consultations-section')
         ->assertSee('Mon 13:00–18:30')
         ->assertDontSee(' PM')
         ->assertDontSee(' AM');
@@ -333,7 +336,7 @@ it('shows the schedule in 24-hour time', function () {
 it('validates a consultation', function (string $type, array $input, string $error) {
     [$user] = pageFreelancer();
 
-    $component = Livewire::actingAs($user)->test('pages::freelancer.consultations');
+    $component = Livewire::actingAs($user)->test('freelancer.consultations-section');
     configureConsultation($component, $type, ['mon']);
 
     foreach ($input as $key => $value) {
@@ -359,7 +362,7 @@ it('validates a consultation', function (string $type, array $input, string $err
 it('keeps the free consultation free whatever price is posted', function () {
     [$user, $profile] = pageFreelancer();
 
-    $component = Livewire::actingAs($user)->test('pages::freelancer.consultations');
+    $component = Livewire::actingAs($user)->test('freelancer.consultations-section');
     configureConsultation($component, 'free', ['mon']);
 
     $component->set('price', '50')->call('save')->assertHasNoErrors();
@@ -372,7 +375,7 @@ it('lets a consultation be switched off without checking its schedule', function
     ConsultationOffer::factory()->for($profile, 'profile')->paid()->create(['duration_minutes' => 45, 'price_cents' => 8000]);
 
     Livewire::actingAs($user)
-        ->test('pages::freelancer.consultations')
+        ->test('freelancer.consultations-section')
         ->call('edit', 'paid')
         ->assertSet('enabled', true)
         ->assertSet('duration_minutes', '45')
@@ -391,7 +394,7 @@ it('loads the saved schedule into the form', function () {
     ]);
 
     Livewire::actingAs($user)
-        ->test('pages::freelancer.consultations')
+        ->test('freelancer.consultations-section')
         ->call('edit', 'free')
         ->assertSet('availability.tue', ['on' => true, 'start' => '08:30', 'end' => '11:00'])
         ->assertSet('availability.mon.on', false);
@@ -401,7 +404,7 @@ it('does not edit a consultation type that does not exist', function () {
     [$user] = pageFreelancer();
 
     Livewire::actingAs($user)
-        ->test('pages::freelancer.consultations')
+        ->test('freelancer.consultations-section')
         ->call('edit', 'vip')
         ->assertNotFound();
 });
@@ -409,7 +412,7 @@ it('does not edit a consultation type that does not exist', function () {
 it('refuses to change consultations while the profile is under review', function () {
     [$user, $profile] = pageFreelancer(true, ProfileStatus::PendingReview);
 
-    $component = Livewire::actingAs($user)->test('pages::freelancer.consultations')
+    $component = Livewire::actingAs($user)->test('freelancer.consultations-section')
         ->assertDontSeeHtml('wire:click="edit(');
 
     configureConsultation($component, 'free', ['mon']);
@@ -426,7 +429,7 @@ it('adds a highlight with a cover, gallery, videos and links', function () {
     [$user, $profile] = pageFreelancer();
 
     Livewire::actingAs($user)
-        ->test('pages::freelancer.highlights')
+        ->test('freelancer.highlights-section')
         ->call('startCreating')
         ->set('title', 'Acme rebrand')
         ->set('description', 'A full rebrand.')
@@ -458,7 +461,7 @@ it('validates a highlight', function (array $input, string $error) {
     Storage::fake('public');
     [$user] = pageFreelancer();
 
-    $component = Livewire::actingAs($user)->test('pages::freelancer.highlights')->set('title', 'Valid title');
+    $component = Livewire::actingAs($user)->test('freelancer.highlights-section')->set('title', 'Valid title');
 
     foreach ($input as $key => $value) {
         $component->set($key, $value);
@@ -479,14 +482,14 @@ it('rejects files that are not images', function () {
     [$user] = pageFreelancer();
 
     Livewire::actingAs($user)
-        ->test('pages::freelancer.highlights')
+        ->test('freelancer.highlights-section')
         ->set('title', 'Valid title')
         ->set('coverUpload', UploadedFile::fake()->create('cover.pdf', 10, 'application/pdf'))
         ->call('save')
         ->assertHasErrors('coverUpload');
 
     Livewire::actingAs($user)
-        ->test('pages::freelancer.highlights')
+        ->test('freelancer.highlights-section')
         ->set('title', 'Valid title')
         ->set('galleryUploads', [UploadedFile::fake()->create('gallery.pdf', 10, 'application/pdf')])
         ->call('save')
@@ -498,7 +501,7 @@ it('limits the gallery size', function () {
     [$user] = pageFreelancer();
 
     Livewire::actingAs($user)
-        ->test('pages::freelancer.highlights')
+        ->test('freelancer.highlights-section')
         ->set('title', 'Valid title')
         ->set('galleryUploads', array_map(fn (int $i) => UploadedFile::fake()->image("{$i}.jpg"), range(1, 13)))
         ->call('save')
@@ -513,7 +516,7 @@ it('edits a highlight, dropping a gallery image', function () {
     $highlight = Highlight::factory()->for($profile, 'profile')->create(['title' => 'Old', 'gallery' => ['highlights/one.jpg', 'highlights/two.jpg']]);
 
     Livewire::actingAs($user)
-        ->test('pages::freelancer.highlights')
+        ->test('freelancer.highlights-section')
         ->call('startEditing', "live-{$highlight->id}")
         ->assertSet('title', 'Old')
         ->assertSet('gallery', ['highlights/one.jpg', 'highlights/two.jpg'])
@@ -534,7 +537,7 @@ it('removes and reorders highlights', function () {
     $b = Highlight::factory()->for($profile, 'profile')->create(['title' => 'B', 'sort_order' => 1]);
 
     $component = Livewire::actingAs($user)
-        ->test('pages::freelancer.highlights')
+        ->test('freelancer.highlights-section')
         ->call('sort', "live-{$b->id}", 0);
 
     expect(array_column($profile->refresh()->openRevision->content()->highlights(), 'title'))->toBe(['B', 'A']);
@@ -549,7 +552,7 @@ it('does not keep uploaded files when saving a highlight is refused', function (
     [$user, $profile] = pageFreelancer(true, ProfileStatus::PendingReview);
 
     Livewire::actingAs($user)
-        ->test('pages::freelancer.highlights')
+        ->test('freelancer.highlights-section')
         ->set('title', 'Too late')
         ->set('coverUpload', UploadedFile::fake()->image('cover.jpg'))
         ->call('save')
@@ -565,7 +568,7 @@ it('cannot edit a highlight that is not in the freelancers own profile', functio
     $foreign = Highlight::factory()->for($other, 'profile')->create();
 
     Livewire::actingAs($user)
-        ->test('pages::freelancer.highlights')
+        ->test('freelancer.highlights-section')
         ->call('startEditing', "live-{$foreign->id}")
         ->assertNotFound();
 });
@@ -615,7 +618,7 @@ it('shows offers that cannot be reviewed when submitting', function () {
 it('lets the freelancer discard pending changes of a published profile', function () {
     [$user, $profile] = pageFreelancer();
     Highlight::factory()->for($profile, 'profile')->create(['title' => 'Live']);
-    Livewire::actingAs($user)->test('pages::freelancer.highlights')->call('delete', 'live-'.$profile->highlights()->first()->id);
+    Livewire::actingAs($user)->test('freelancer.highlights-section')->call('delete', 'live-'.$profile->highlights()->first()->id);
 
     expect($profile->refresh()->displayStatus())->toBe(ProfileStatus::Draft);
 
@@ -634,9 +637,9 @@ it('offers neither submitting nor discarding while a review is in progress', fun
 
     Livewire::actingAs($user)
         ->test('profile-revision-bar')
-        ->assertSee('Your profile is under review')
         ->assertDontSee('Submit for review')
-        ->assertDontSee('Discard changes');
+        ->assertDontSee('Discard changes')
+        ->assertDontSeeHtml('fixed inset-x-0');
 });
 
 // Preview ------------------------------------------------------------------------------------

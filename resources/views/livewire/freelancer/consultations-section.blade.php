@@ -10,10 +10,9 @@ use App\Models\FreelancerProfile;
 use Flux\Flux;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
-use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new #[Title('Consultations')] class extends Component {
+new class extends Component {
     #[Locked]
     public int $profileId = 0;
 
@@ -177,17 +176,11 @@ new #[Title('Consultations')] class extends Component {
     }
 };
 ?>
-
-<div class="mx-auto w-full max-w-3xl space-y-6">
-    <div>
-        <flux:heading size="xl" level="1">Consultations</flux:heading>
-        <flux:text class="mt-1">
-            You have two kinds of calls: a free one and a paid one. Switch each on or off and set how long it lasts and when clients can book it.
-            Clients book a slot, you approve it, and the call takes place on Google Meet.
-        </flux:text>
-    </div>
-
-    <livewire:profile-revision-bar />
+<x-site.section id="consultations" heading="Consultations">
+    <flux:text class="mb-6">
+        You have two kinds of calls: a free one and a paid one. Switch each on or off and set how long it lasts and when clients can book it.
+        Clients book a slot, you approve it, and the call takes place on Google Meet.
+    </flux:text>
 
     <div class="space-y-4">
         @foreach ($this->offers() as $offer)
@@ -304,4 +297,4 @@ new #[Title('Consultations')] class extends Component {
             </div>
         </form>
     </flux:modal>
-</div>
+</x-site.section>

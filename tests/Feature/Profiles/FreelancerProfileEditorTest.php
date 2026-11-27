@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Profiles\ApproveProfile;
+use App\Actions\Profiles\OpenProfileRevision;
 use App\Enums\ProfileStatus;
 use App\Models\FreelancerProfile;
 use App\Models\FreelancerProfileRevision;
@@ -68,7 +69,7 @@ it('returns 404 over HTTP for a freelancer who has no profile', function () {
         ->assertNotFound();
 });
 
-it('saves the draft with its details and work history in the revision', function () {
+it('saves the draft with its details in the revision', function () {
     [$user, $profile] = freelancerWithProfile();
     $function = ProfessionalFunction::factory()->create();
     [$main, $secondary] = ProfessionalRole::factory()->count(2)->create();
@@ -95,10 +96,6 @@ it('saves the draft with its details and work history in the revision', function
         ->set('open_to_full_time', 'no')
         ->set('best_fit_1', 'Subscription brands')
         ->set('best_fit_3', 'Personal care')
-        ->call('addExperience')
-        ->set('experiences.0.company', 'Acme')
-        ->set('experiences.0.role', 'Lead designer')
-        ->set('experiences.0.started_at', '2020-01-01')
         ->call('save')
         ->assertHasNoErrors()
         ->assertSet('notice', 'Your changes have been saved.');
@@ -120,7 +117,6 @@ it('saves the draft with its details and work history in the revision', function
         ->and($content->get('weekly_hours'))->toBe('21-40')
         ->and($content->get('open_to_full_time'))->toBeFalse()
         ->and($content->get('best_fit'))->toBe(['Subscription brands', 'Personal care'])
-        ->and(array_column($content->experiences(), 'company'))->toBe(['Acme'])
         ->and($profile->openRevision->status)->toBe(ProfileStatus::Draft)
         ->and($profile->isPublished())->toBeFalse()
         ->and($profile->skills()->count())->toBe(0)
@@ -224,30 +220,29 @@ it('drops the retainer details when monthly retainers are switched off', functio
         ->and($content->get('monthly_retainers_from_cents'))->toBeNull();
 });
 
-it('removes a work history entry', function () {
+it('leaves the work history alone when the profile form is saved', function () {
     [$user, $profile] = freelancerWithProfile();
 
-    $component = Livewire::actingAs($user)
+    $revision = app(OpenProfileRevision::class)($profile);
+    $revision->forceFill(['payload' => $revision->content()->with(['experiences' => [
+        ['company' => 'Acme', 'role' => 'Designer', 'started_at' => '2020-01-01', 'ended_at' => null, 'description' => null],
+    ]])->toArray()])->save();
+
+    Livewire::actingAs($user)
         ->test('pages::freelancer.profile')
-        ->call('addExperience')
-        ->set('experiences.0.company', 'Acme')
-        ->set('experiences.0.role', 'Designer')
-        ->set('experiences.0.started_at', '2020-01-01')
-        ->call('save');
+        ->set('professional_title', 'Product designer')
+        ->call('save')
+        ->assertHasNoErrors();
 
-    $component->call('removeExperience', 0)->call('save')->assertHasNoErrors();
-
-    expect($profile->refresh()->openRevision->content()->experiences())->toBe([]);
+    expect(array_column($profile->refresh()->openRevision->content()->experiences(), 'company'))->toBe(['Acme']);
 });
 
-it('validates work history entries', function () {
+it('no longer edits the work history on the profile page', function () {
     [$user] = freelancerWithProfile();
 
     Livewire::actingAs($user)
         ->test('pages::freelancer.profile')
-        ->call('addExperience')
-        ->call('save')
-        ->assertHasErrors(['experiences.0.company', 'experiences.0.role', 'experiences.0.started_at']);
+        ->assertDontSee('Work history');
 });
 
 it('rejects an invalid website', function () {

@@ -77,27 +77,49 @@ it('keeps the settings and log out in the account menu of every role', function 
         ->assertSee('Log out');
 })->with(['client', 'freelancer', 'admin']);
 
-it('gives the brand area a tab bar under the header', function () {
-    $this->actingAs(User::factory()->client()->create())->get(route('client.calls'))
+it('gives the brand dashboard a sticky tab bar of anchors', function () {
+    $this->actingAs(User::factory()->client()->create())->get(route('client.dashboard'))
         ->assertOk()
-        ->assertSeeInOrder(['Overview', 'Calls', 'Projects', 'Favourites', 'Recommended'])
-        ->assertSeeHtml('aria-current="page"');
+        ->assertSeeInOrder(['Overview', 'Calls', 'Projects', 'Messages'])
+        ->assertSeeHtml('href="#overview"')
+        ->assertSeeHtml('href="#calls"')
+        ->assertSeeHtml('href="#projects"')
+        ->assertSeeHtml('href="#messages"')
+        ->assertSeeHtml('sticky top-0')
+        ->assertSeeHtml('id="messages"');
 });
 
-it('gives the freelancer area a tab bar under the header', function () {
-    $this->actingAs(FreelancerProfile::factory()->published()->create()->user)->get(route('freelancer.services'))
-        ->assertOk()
-        ->assertSeeInOrder(['Overview', 'My profile', 'Highlights', 'Services', 'Consultations']);
+it('keeps Favourites and Recommended in the account menu of a brand, not in the tab bar', function () {
+    $response = $this->actingAs(User::factory()->client()->create())->get(route('client.dashboard'))->assertOk();
+
+    $nav = preg_match('#<nav[^>]*aria-label="Sections".*?</nav>#s', $response->getContent(), $matches) === 1 ? $matches[0] : '';
+
+    expect($nav)->not->toContain('Favourites')->not->toContain('Recommended');
+
+    $response->assertSeeHtml('href="'.route('client.favorites').'"')
+        ->assertSeeHtml('href="'.route('client.recommended').'"')
+        ->assertSeeHtml('href="'.route('client.brand-profile').'"');
 });
 
-it('has no tab bar outside the brand and freelancer areas', function () {
-    $this->actingAs(User::factory()->client()->create())->get(route('blog.index'))
+it('puts Profile settings in the account menu of a freelancer', function () {
+    $this->actingAs(FreelancerProfile::factory()->published()->create()->user)->get(route('freelancer.dashboard'))
         ->assertOk()
-        ->assertDontSee('aria-label="Sections"', false);
+        ->assertSee('Profile settings')
+        ->assertSeeHtml('href="'.route('freelancer.profile').'"');
+});
 
-    $this->actingAs(FreelancerProfile::factory()->published()->create()->user)->get(route('freelancer.preview'))
-        ->assertOk()
-        ->assertDontSee('aria-label="Sections"', false);
+it('has no tab bar outside the two dashboards', function () {
+    $client = User::factory()->client()->create();
+
+    foreach (['blog.index', 'messages.index', 'client.favorites', 'client.recommended', 'client.brand-profile', 'directory.index'] as $route) {
+        $this->actingAs($client)->get(route($route))->assertOk()->assertDontSee('aria-label="Sections"', false);
+    }
+
+    $freelancer = FreelancerProfile::factory()->published()->create()->user;
+
+    foreach (['freelancer.preview', 'freelancer.profile', 'messages.index'] as $route) {
+        $this->actingAs($freelancer)->get(route($route))->assertOk()->assertDontSee('aria-label="Sections"', false);
+    }
 });
 
 it('has a footer on every page', function () {

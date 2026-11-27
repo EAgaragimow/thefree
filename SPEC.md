@@ -389,6 +389,28 @@ Full System Control means broad authorized **application** administration, not b
 
 **Admin:** users, applications, profile/review moderation, reports/disputes, projects, consultations, payment/subscription monitoring, catalog lists (functions, roles, skills, tools, industries), content, settings, audit logs.
 
+### Dashboard layout
+
+Everything except the admin panel shares one site layout: a black header, a light-grey page with white blocks, serif headings, green and orange accents, and a footer. The admin panel keeps its own look.
+
+**Header.** Guests see Become a Freelancer, Log in and Sign up. Once signed in those disappear and the header shows only the pages of the role: a Client sees Dashboard, Messages, Freelancers and Blog; a Freelancer sees Dashboard, Profile (the public profile preview) and Messages; an Admin sees Admin panel, Freelancers, Blog and Messages. The account menu holds Settings and Log out; a Client also gets Favourites, Recommended and Brand settings there, a Freelancer gets Profile settings.
+
+**Sticky tab bar.** Each dashboard has a sticky bar under the header whose items are anchors to the sections of that dashboard. The item of the section being read is highlighted as the page scrolls, and on narrow screens the bar scrolls sideways by itself to keep that item centred. Other pages have no tab bar.
+
+**Client dashboard** — sections and anchors, in order: Overview, Calls, Projects, Messages.
+
+- Overview: the brand's company details (name, description, location, email, industries, functions, roles, social links).
+- Calls and Projects have no pages of their own. Each section lists its entries as cards, **12 per page** with pagination inside the section. The page number is neither put in the URL nor remembered. *(Planned; the sections are empty placeholders for now.)*
+- Messages: the **12 latest conversations**, newest last message first. *(Planned; an empty placeholder for now.)*
+
+**Freelancer dashboard** — sections and anchors, in order: Overview, Messages, Requests, Calls, Projects, Highlights, Services, Work history, Consultations. Every section is a full-width block of its own.
+
+- Overview: profile status and the buttons to preview the profile and open the profile settings.
+- Messages: the **12 latest conversations**, as on the Client dashboard. *(Planned; an empty placeholder for now.)*
+- Requests, Calls and Projects are lists with pagination, **12 per page**. *(Planned; empty placeholders for now.)*
+- Highlights, Services, Work history and Consultations have no pages of their own: they are created, edited, reordered (Highlights and Services) and removed only in their sections, in pop-up forms, with the same 12-per-page pagination (Consultations are always the two fixed types and are not paginated). The page number is neither put in the URL nor remembered.
+- Any change to the profile content opens a sticky panel at the bottom of the screen with **Submit for review** and **Discard changes** (the second one only for a published profile). The panel disappears once the changes are submitted or discarded. The basic profile details (title, about, photo, rates, function, roles, skills, tools, industries, links) stay on the Profile settings page.
+
 ### UX standards
 
 - Minimal functional interface; no heavy animations or decorative requirements.

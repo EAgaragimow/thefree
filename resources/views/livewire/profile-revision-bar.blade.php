@@ -30,6 +30,11 @@ new class extends Component {
         $this->resetErrorBag();
     }
 
+    public function dismissNotice(): void
+    {
+        $this->notice = null;
+    }
+
     public function submit(SubmitProfileForReview $submit): void
     {
         $this->notice = null;
@@ -66,12 +71,22 @@ new class extends Component {
 };
 ?>
 
-<div class="space-y-4">
+<div>
     @php($profile = $this->profile())
     @php($revision = $profile->openRevision)
 
+    {{-- The panel appears at the bottom of the screen as soon as there is something to submit or discard, or a result to read. --}}
+    @if ($notice !== null || $errors->any() || $revision?->status->isEditable())
+        <div class="h-40" aria-hidden="true"></div>
+
+        <div class="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white shadow-[0_-4px_16px_rgba(0,0,0,0.08)]">
+            <div class="mx-auto max-h-[60vh] w-full max-w-7xl space-y-3 overflow-y-auto px-4 py-4 sm:px-6">
     @if ($notice)
-        <flux:callout variant="success" icon="check-circle" heading="{{ $notice }}" />
+        <flux:callout variant="success" icon="check-circle" heading="{{ $notice }}">
+            <x-slot name="controls">
+                <flux:button size="sm" variant="ghost" icon="x-mark" wire:click="dismissNotice" aria-label="Close" />
+            </x-slot>
+        </flux:callout>
     @endif
 
     @if ($errors->any())
@@ -115,6 +130,9 @@ new class extends Component {
                     Discard changes
                 </flux:button>
             @endif
+        </div>
+    @endif
+            </div>
         </div>
     @endif
 </div>

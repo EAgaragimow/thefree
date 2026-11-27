@@ -29,8 +29,6 @@ Route::middleware(['auth', 'active', 'verified'])->group(function () {
     Route::middleware('role:client')->prefix('client')->name('client.')->group(function () {
         Route::livewire('/dashboard', 'pages::client.dashboard')->name('dashboard');
         Route::livewire('/recommended', 'pages::client.recommended')->name('recommended');
-        Route::livewire('/calls', 'pages::client.calls')->name('calls');
-        Route::livewire('/projects', 'pages::client.projects')->name('projects');
         Route::livewire('/favorites', 'pages::client.favorites')->name('favorites');
         Route::livewire('/brand-profile', 'pages::client.brand-profile')->name('brand-profile');
     });
@@ -43,9 +41,6 @@ Route::middleware(['auth', 'active', 'verified'])->group(function () {
     Route::middleware('role:freelancer')->prefix('freelancer')->name('freelancer.')->group(function () {
         Route::livewire('/dashboard', 'pages::freelancer.dashboard')->name('dashboard');
         Route::livewire('/profile', 'pages::freelancer.profile')->name('profile');
-        Route::livewire('/highlights', 'pages::freelancer.highlights')->name('highlights');
-        Route::livewire('/services', 'pages::freelancer.services')->name('services');
-        Route::livewire('/consultations', 'pages::freelancer.consultations')->name('consultations');
         Route::livewire('/preview', 'pages::freelancer.preview')->name('preview');
     });
 });

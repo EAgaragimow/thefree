@@ -51,7 +51,11 @@
                     <flux:menu>
                         <flux:menu.item icon="cog-6-tooth" href="{{ route('settings.profile') }}">Settings</flux:menu.item>
                         @if ($user->isClient())
+                            <flux:menu.item icon="heart" href="{{ route('client.favorites') }}">Favourites</flux:menu.item>
+                            <flux:menu.item icon="sparkles" href="{{ route('client.recommended') }}">Recommended</flux:menu.item>
                             <flux:menu.item icon="building-office" href="{{ route('client.brand-profile') }}">Brand settings</flux:menu.item>
+                        @elseif ($user->isFreelancer())
+                            <flux:menu.item icon="user-circle" href="{{ route('freelancer.profile') }}">Profile settings</flux:menu.item>
                         @endif
                         <flux:menu.separator />
                         <form method="POST" action="{{ route('logout') }}">
@@ -82,7 +86,11 @@
             @auth
                 <a href="{{ route('settings.profile') }}" class="py-3 text-sm font-semibold uppercase tracking-wide text-white">Settings</a>
                 @if ($user->isClient())
+                    <a href="{{ route('client.favorites') }}" class="py-3 text-sm font-semibold uppercase tracking-wide text-white">Favourites</a>
+                    <a href="{{ route('client.recommended') }}" class="py-3 text-sm font-semibold uppercase tracking-wide text-white">Recommended</a>
                     <a href="{{ route('client.brand-profile') }}" class="py-3 text-sm font-semibold uppercase tracking-wide text-white">Brand settings</a>
+                @elseif ($user->isFreelancer())
+                    <a href="{{ route('freelancer.profile') }}" class="py-3 text-sm font-semibold uppercase tracking-wide text-white">Profile settings</a>
                 @endif
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf

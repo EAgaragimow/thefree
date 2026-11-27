@@ -8,21 +8,20 @@ it('sends guests to the login page and keeps freelancers out', function (string 
     $this->get(route($route))->assertRedirect(route('login'));
 
     $this->actingAs(User::factory()->freelancer()->create())->get(route($route))->assertForbidden();
-})->with(['client.recommended', 'client.calls', 'client.projects']);
+})->with(['client.recommended']);
 
 it('opens the pages for clients on either plan', function (string $route, string $text) {
     $this->actingAs(User::factory()->client()->create())->get(route($route))->assertOk()->assertSee($text);
     $this->actingAs(User::factory()->client()->paid()->create())->get(route($route))->assertOk()->assertSee($text);
 })->with([
     'recommended' => ['client.recommended', 'Recommended freelancers'],
-    'calls' => ['client.calls', 'You have no upcoming calls.'],
-    'projects' => ['client.projects', 'You have no projects yet.'],
 ]);
 
-it('links the dashboard groups to their pages', function () {
-    Livewire::actingAs(User::factory()->client()->create())->test('pages::client.dashboard')
-        ->assertSeeHtml('href="'.route('client.calls').'"')
-        ->assertSeeHtml('href="'.route('client.projects').'"');
+it('has no separate pages for calls and projects', function () {
+    $client = User::factory()->client()->create();
+
+    $this->actingAs($client)->get('/client/calls')->assertNotFound();
+    $this->actingAs($client)->get('/client/projects')->assertNotFound();
 });
 
 it('keeps the recommendations off the dashboard and lists all of them on their own page, best score first', function () {
@@ -66,8 +65,8 @@ it('says so when there is nobody to recommend', function () {
         ->assertSee('No freelancers to recommend yet');
 });
 
-it('shows the new tabs to brands only', function () {
-    $links = ['client.recommended', 'client.calls', 'client.projects'];
+it('shows the account menu links to brands only', function () {
+    $links = ['client.recommended', 'client.favorites'];
 
     $client = $this->actingAs(User::factory()->client()->create())->get(route('client.dashboard'));
     $freelancer = $this->actingAs(User::factory()->freelancer()->create())->get(route('freelancer.dashboard'));
