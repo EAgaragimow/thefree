@@ -87,8 +87,8 @@ it('lists requests, calls and projects above the profile groups', function () {
 
     Livewire::actingAs($profile->user)->test('pages::freelancer.dashboard')
         ->assertSeeInOrder(['Requests', 'Calls', 'Projects', 'Highlights', 'Services', 'Work history', 'Consultations'])
-        ->assertSee('You have no call requests.')
-        ->assertSee('You have no upcoming calls.')
-        ->assertSee('You have no projects yet.')
+        ->assertSee('No call requests to show.')
+        ->assertSee('No calls to show.')
+        ->assertSee('No projects yet.')
         ->assertDontSee('Requests and projects');
 });

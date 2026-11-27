@@ -8,7 +8,108 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+ * The public site and the brand and freelancer areas share one look: black header, light grey page,
+ * white blocks, serif headings, green and orange accents. The admin panel is Filament and has its own
+ * styles; nothing here reaches it.
+ */
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-serif: 'Playfair Display', Georgia, 'Times New Roman', serif;
+
+    --color-ink: #1f2321;
+    --color-ink-soft: #2c312e;
+    --color-page: #eeeeee;
+    --color-tab: #e6e6e6;
+    --color-leaf: #1f8a5b;
+    --color-leaf-dark: #17704a;
+    --color-ember: #e8852b;
+    --color-ember-dark: #c96f1c;
+}
+
+:root {
+    --flux-card-radius: 4px;
+    --color-accent: var(--color-ink);
+    --color-accent-content: var(--color-ink);
+    --color-accent-foreground: #ffffff;
+}
+
+/* Headings: the big ones are serif, small labels stay sans-serif. */
+h1[data-flux-heading],
+h2[data-flux-heading],
+[data-flux-heading].text-4xl,
+[data-flux-heading].text-2xl,
+.font-display {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+}
+
+[data-flux-heading].text-base {
+    font-family: var(--font-serif);
+    font-size: 1.25rem;
+    font-weight: 500;
+}
+
+/* Buttons: square, capitalised, like the navigation. */
+[data-flux-button] {
+    border-radius: 2px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+[data-flux-button][data-flux-size='sm'],
+[data-flux-button].text-xs {
+    font-size: 0.75rem;
+}
+
+[data-flux-card] {
+    border-radius: var(--flux-card-radius);
+}
+
+[data-flux-badge] {
+    border-radius: 2px;
+}
+
+/* The green call-to-action used on the home page and in empty states. */
+.btn-leaf {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 2px;
+    background: var(--color-leaf);
+    padding: 0.75rem 1.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: #fff;
+    transition: background-color 0.15s;
+}
+
+.btn-leaf:hover {
+    background: var(--color-leaf-dark);
+}
+
+.btn-outline-light {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: 1px solid rgb(255 255 255 / 0.7);
+    border-radius: 2px;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: #fff;
+    transition: background-color 0.15s;
+}
+
+.btn-outline-light:hover {
+    background: rgb(255 255 255 / 0.12);
 }

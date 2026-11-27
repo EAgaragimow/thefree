@@ -84,68 +84,63 @@ new #[Title('Dashboard')] class extends Component {
 };
 ?>
 
-<div class="space-y-8">
-    <div>
+<div class="space-y-4">
+    <x-site.section>
         <flux:heading size="xl" level="1">Welcome, {{ auth()->user()->name }}</flux:heading>
         <flux:text class="mt-1">Your freelancer dashboard.</flux:text>
-    </div>
 
-    @if ($profile = $this->profile())
-        @php($status = $profile->displayStatus())
-        <flux:card class="space-y-3">
-            <div class="flex items-center justify-between gap-4">
-                <flux:heading>Profile status</flux:heading>
-                <div class="flex items-center gap-2">
+        @if ($profile = $this->profile())
+            @php($status = $profile->displayStatus())
+            <div class="mt-8 space-y-4">
+                <div class="flex flex-wrap items-center gap-3">
+                    <flux:heading>Profile status</flux:heading>
                     <flux:badge color="{{ $this->statusColor($status) }}">{{ $this->statusLabel($status) }}</flux:badge>
                     @if ($profile->is_newbie)
-                        <flux:badge color="sky">Newbie</flux:badge>
+                        <flux:badge color="amber">Newbie</flux:badge>
                     @endif
                 </div>
+
+                @if ($status === ProfileStatus::ChangesRequested && $profile->openRevision?->last_change_request)
+                    <flux:callout variant="warning" icon="exclamation-triangle" heading="An administrator requested changes">
+                        {{ $profile->openRevision->last_change_request }}
+                    </flux:callout>
+                @endif
+
+                @if ($status === ProfileStatus::PendingReview)
+                    <flux:text>Your profile is being reviewed. We will email you once there is a decision.</flux:text>
+                @elseif ($status === ProfileStatus::Published)
+                    <flux:text>Your profile is live.</flux:text>
+                @else
+                    <flux:text>Complete your profile and submit it for review to get published.</flux:text>
+                @endif
+
+                @if ($profile->isPublished() && $status !== ProfileStatus::Published)
+                    <flux:text>Your last approved version stays visible while your new changes are reviewed.</flux:text>
+                @endif
+
+                <div class="flex flex-wrap gap-2">
+                    <flux:button href="{{ route('freelancer.preview') }}" variant="primary">Preview Profile</flux:button>
+                    <flux:button href="{{ route('freelancer.profile') }}">Profile Settings</flux:button>
+                </div>
             </div>
-
-            @if ($status === ProfileStatus::ChangesRequested && $profile->openRevision?->last_change_request)
-                <flux:callout variant="warning" icon="exclamation-triangle" heading="An administrator requested changes">
-                    {{ $profile->openRevision->last_change_request }}
-                </flux:callout>
-            @endif
-
-            @if ($status === ProfileStatus::PendingReview)
-                <flux:text>Your profile is being reviewed. We will email you once there is a decision.</flux:text>
-            @elseif ($status === ProfileStatus::Published)
-                <flux:text>Your profile is live.</flux:text>
-            @else
-                <flux:text>Complete your profile and submit it for review to get published.</flux:text>
-            @endif
-
-            @if ($profile->isPublished() && $status !== ProfileStatus::Published)
-                <flux:text>Your last approved version stays visible while your new changes are reviewed.</flux:text>
-            @endif
-
-            <div class="flex flex-wrap gap-2">
-                <flux:button href="{{ route('freelancer.preview') }}" variant="primary">Preview Profile</flux:button>
-                <flux:button href="{{ route('freelancer.profile') }}">Profile Settings</flux:button>
-            </div>
-        </flux:card>
-    @endif
+        @endif
+    </x-site.section>
 
     @php($profile = $this->profile())
     @php($content = $profile ? $this->content($profile) : ProfileContent::fromArray([]))
     @php($consultations = $this->offeredConsultations($content))
 
-    <flux:card>
-        <flux:heading>Requests</flux:heading>
-        <flux:text class="mt-1">You have no call requests.</flux:text>
-    </flux:card>
+    <x-site.section heading="Requests" :count="0">
+        <x-site.empty title="No call requests to show." text="New requests will appear here as they come in." />
+    </x-site.section>
 
-    <flux:card>
-        <flux:heading>Calls</flux:heading>
-        <flux:text class="mt-1">You have no upcoming calls.</flux:text>
-    </flux:card>
+    <x-site.section heading="Calls" :count="0">
+        <x-site.empty title="No calls to show." text="Scheduled consultations and past calls will appear here." />
+    </x-site.section>
 
-    <flux:card>
-        <flux:heading>Projects</flux:heading>
-        <flux:text class="mt-1">You have no projects yet.</flux:text>
-    </flux:card>
+    <x-site.section heading="Projects" :count="0">
+        <x-site.empty title="No projects yet." text="Your projects will appear here as they progress." />
+    </x-site.section>
 
     <div class="grid gap-4 lg:grid-cols-2">
         <x-settings-group heading="Highlights" :href="route('freelancer.highlights')" :empty="$content->highlights() === []">

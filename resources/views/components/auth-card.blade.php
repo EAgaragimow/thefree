@@ -1,7 +1,7 @@
 @props(['title', 'subtitle' => null])
 
-<x-layouts.public :title="$title">
-    <div class="mx-auto w-full max-w-md py-12">
+<x-layouts.public :title="$title" :panel="false">
+    <div class="mx-auto w-full max-w-md bg-white p-8 sm:p-10">
         <flux:heading size="xl" level="1">{{ $title }}</flux:heading>
 
         @if ($subtitle)

@@ -54,13 +54,13 @@
 
     <div class="flex flex-wrap gap-1.5">
         @if ($profile->is_newbie)
-            <flux:badge color="sky" size="sm">Newbie</flux:badge>
+            <flux:badge color="amber" size="sm">Newbie</flux:badge>
         @endif
         @if ($profile->professionalFunction)
-            <flux:badge color="blue" size="sm">{{ $profile->professionalFunction->name }}</flux:badge>
+            <flux:badge color="green" size="sm">{{ $profile->professionalFunction->name }}</flux:badge>
         @endif
         @if ($profile->mainRole)
-            <flux:badge color="indigo" size="sm">{{ $profile->mainRole->name }}</flux:badge>
+            <flux:badge color="zinc" size="sm">{{ $profile->mainRole->name }}</flux:badge>
         @endif
     </div>
 

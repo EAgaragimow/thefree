@@ -19,6 +19,8 @@ Route::middleware(['auth', 'active', 'verified'])->group(function () {
         Route::livewire('/account', 'pages::settings.account')->name('account');
     });
 
+    Route::livewire('/messages', 'pages::messages.index')->name('messages.index');
+
     Route::prefix('freelancers')->name('directory.')->group(function () {
         Route::livewire('/', 'pages::directory.index')->name('index');
         Route::livewire('/{profile}', 'pages::directory.show')->name('show');
@@ -33,7 +35,7 @@ Route::middleware(['auth', 'active', 'verified'])->group(function () {
         Route::livewire('/brand-profile', 'pages::client.brand-profile')->name('brand-profile');
     });
 
-    Route::middleware('role:client')->prefix('blog')->name('blog.')->group(function () {
+    Route::middleware('role:client,admin')->prefix('blog')->name('blog.')->group(function () {
         Route::livewire('/', 'pages::blog.index')->name('index');
         Route::livewire('/{slug}', 'pages::blog.show')->name('show');
     });

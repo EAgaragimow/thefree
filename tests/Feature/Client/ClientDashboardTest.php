@@ -85,7 +85,7 @@ it('shows no brand card before the brand profile exists', function () {
 
 it('lists calls and projects as separate groups, calls first', function () {
     Livewire::actingAs(User::factory()->client()->create())->test('pages::client.dashboard')
-        ->assertSeeInOrder(['Calls', 'You have no upcoming calls.', 'Projects', 'You have no projects yet.'])
+        ->assertSeeInOrder(['Calls', 'No calls to show.', 'Projects', 'No projects yet.'])
         ->assertDontSee('Recommended freelancers')
         ->assertDontSee('Projects and calls');
 });

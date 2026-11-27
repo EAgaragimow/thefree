@@ -62,10 +62,10 @@
     @if ($professionalFunction || count($roles))
         <section class="flex flex-wrap gap-2">
             @if ($professionalFunction)
-                <flux:badge color="blue">{{ $professionalFunction }}</flux:badge>
+                <flux:badge color="green">{{ $professionalFunction }}</flux:badge>
             @endif
             @foreach ($roles as $role)
-                <flux:badge color="indigo">{{ $role }}</flux:badge>
+                <flux:badge color="zinc">{{ $role }}</flux:badge>
             @endforeach
         </section>
     @endif

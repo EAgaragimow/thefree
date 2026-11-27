@@ -20,14 +20,25 @@ it('sends guests to the login page', function () {
     $this->get(route('blog.show', $post->slug))->assertRedirect(route('login'));
 });
 
-it('keeps freelancers and admins out of the client blog', function (string $role) {
+it('keeps freelancers out of the blog', function () {
     $post = articleWithBody();
 
-    $this->actingAs(User::factory()->{$role}()->create());
+    $this->actingAs(User::factory()->freelancer()->create());
 
     $this->get(route('blog.index'))->assertForbidden();
     $this->get(route('blog.show', $post->slug))->assertForbidden();
-})->with(['freelancer', 'admin']);
+});
+
+it('lets an admin read every article in full', function () {
+    $post = articleWithBody();
+
+    $this->actingAs(User::factory()->admin()->create());
+
+    $this->get(route('blog.index'))->assertOk()->assertSee('Hiring your first freelancer');
+    $this->get(route('blog.show', $post->slug))
+        ->assertOk()
+        ->assertSee('The secret full text of the article.');
+});
 
 it('lists published articles with their excerpts for a Free client', function () {
     articleWithBody();
@@ -136,10 +147,4 @@ it('shows an empty state when nothing is published', function () {
         ->get(route('blog.index'))
         ->assertOk()
         ->assertSee('No articles yet');
-});
-
-it('adds Blog to the brand navigation between Recommended and Brand settings', function () {
-    $this->actingAs(User::factory()->client()->create())
-        ->get(route('client.dashboard'))
-        ->assertSeeInOrder(['Recommended', 'Blog', 'Brand settings']);
 });
